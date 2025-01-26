@@ -9,7 +9,157 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      bookings: {
+        Row: {
+          car_id: string
+          created_at: string
+          customer_id: string
+          end_date: string
+          id: string
+          start_date: string
+          status: string | null
+          total_amount: number
+        }
+        Insert: {
+          car_id: string
+          created_at?: string
+          customer_id: string
+          end_date: string
+          id?: string
+          start_date: string
+          status?: string | null
+          total_amount: number
+        }
+        Update: {
+          car_id?: string
+          created_at?: string
+          customer_id?: string
+          end_date?: string
+          id?: string
+          start_date?: string
+          status?: string | null
+          total_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookings_car_id_fkey"
+            columns: ["car_id"]
+            isOneToOne: false
+            referencedRelation: "cars"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      car_availability: {
+        Row: {
+          car_id: string
+          created_at: string
+          end_date: string
+          id: string
+          is_available: boolean
+          start_date: string
+        }
+        Insert: {
+          car_id: string
+          created_at?: string
+          end_date: string
+          id?: string
+          is_available?: boolean
+          start_date: string
+        }
+        Update: {
+          car_id?: string
+          created_at?: string
+          end_date?: string
+          id?: string
+          is_available?: boolean
+          start_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "car_availability_car_id_fkey"
+            columns: ["car_id"]
+            isOneToOne: false
+            referencedRelation: "cars"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cars: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          license_plate: string
+          model: string
+          provider_id: string
+          rate_per_day: number
+          seats: number
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          license_plate: string
+          model: string
+          provider_id: string
+          rate_per_day: number
+          seats: number
+          year: number
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          license_plate?: string
+          model?: string
+          provider_id?: string
+          rate_per_day?: number
+          seats?: number
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cars_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          full_name: string | null
+          id: string
+          phone: string | null
+          role: Database["public"]["Enums"]["user_role"]
+        }
+        Insert: {
+          created_at?: string
+          full_name?: string | null
+          id: string
+          phone?: string | null
+          role?: Database["public"]["Enums"]["user_role"]
+        }
+        Update: {
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          role?: Database["public"]["Enums"]["user_role"]
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -18,7 +168,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      user_role: "customer" | "provider"
     }
     CompositeTypes: {
       [_ in never]: never
