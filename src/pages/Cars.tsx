@@ -6,10 +6,12 @@ import { Calendar } from "@/components/ui/calendar";
 import { Car, Calendar as CalendarIcon } from "lucide-react";
 import { useState } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { format } from "date-fns";
+import { format, differenceInDays } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/components/ui/use-toast";
 
 const Cars = () => {
+  const { toast } = useToast();
   const [selectedDates, setSelectedDates] = useState<{
     from: Date | undefined;
     to: Date | undefined;
@@ -34,6 +36,57 @@ const Cars = () => {
       return data;
     },
   });
+
+  const handleBooking = async (carId: string, ratePerDay: number) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to book a car",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!selectedDates.from || !selectedDates.to) {
+      toast({
+        title: "Select dates",
+        description: "Please select both start and end dates",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const days = differenceInDays(selectedDates.to, selectedDates.from) + 1;
+    const totalAmount = days * ratePerDay;
+
+    const { error } = await supabase
+      .from('bookings')
+      .insert({
+        car_id: carId,
+        customer_id: user.id,
+        start_date: selectedDates.from.toISOString(),
+        end_date: selectedDates.to.toISOString(),
+        total_amount: totalAmount,
+      });
+
+    if (error) {
+      toast({
+        title: "Booking failed",
+        description: error.message,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    toast({
+      title: "Booking successful",
+      description: `Your booking has been confirmed for ${days} days. Total: $${totalAmount}`,
+    });
+
+    setSelectedDates({ from: undefined, to: undefined });
+  };
 
   if (isLoading) {
     return (
@@ -116,7 +169,10 @@ const Cars = () => {
                 <p>License: {car.license_plate}</p>
                 {car.description && <p>{car.description}</p>}
               </div>
-              <Button className="w-full mt-4">
+              <Button 
+                className="w-full mt-4"
+                onClick={() => handleBooking(car.id, car.rate_per_day)}
+              >
                 Book Now
               </Button>
             </CardContent>
