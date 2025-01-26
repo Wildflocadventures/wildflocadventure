@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { Sonner } from "sonner";
+import { Toaster as SonnerToaster } from "sonner";
 import Index from "@/pages/Index";
 import Cars from "@/pages/Cars";
 
@@ -13,7 +13,7 @@ const App = () => (
     <TooltipProvider>
       <div className="min-h-screen bg-background">
         <Toaster />
-        <Sonner />
+        <SonnerToaster />
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
