@@ -42,6 +42,66 @@ const Cars = () => {
     },
   });
 
+  const handleBooking = async (carId: string, ratePerDay: number) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast({
+          title: "Error",
+          description: "Please login to book a car",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!selectedDates.from || !selectedDates.to) {
+        toast({
+          title: "Error",
+          description: "Please select booking dates",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const days = differenceInDays(selectedDates.to, selectedDates.from) + 1;
+      const totalAmount = days * ratePerDay;
+
+      const { data, error } = await supabase
+        .from("bookings")
+        .insert({
+          car_id: carId,
+          customer_id: user.id,
+          start_date: selectedDates.from.toISOString(),
+          end_date: selectedDates.to.toISOString(),
+          total_amount: totalAmount,
+          status: 'pending'
+        })
+        .select()
+        .single();
+
+      if (error) {
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Success",
+        description: "Car booked successfully!",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   const isCarAvailable = (car: any) => {
     if (!selectedDates.from || !selectedDates.to) return true;
     
@@ -152,7 +212,7 @@ const Cars = () => {
                 </Button>
               </CardContent>
             </Card>
-          )
+          );
         })}
       </div>
     </div>
