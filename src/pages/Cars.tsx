@@ -105,7 +105,6 @@ const Cars = () => {
   const isCarAvailable = (car: any) => {
     if (!selectedDates.from || !selectedDates.to) return true;
     
-    // Check if there's any availability record that covers the selected dates
     return car.car_availability?.some((availability: any) => {
       const availStart = new Date(availability.start_date);
       const availEnd = new Date(availability.end_date);
