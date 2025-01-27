@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { Car, UserCircle } from "lucide-react";
+import { Car, UserCircle, Truck, User } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -17,45 +18,93 @@ const Index = () => {
             Find the perfect car for your journey, or rent out your vehicle to earn extra income
           </p>
           
-          {/* Call to Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button 
-              size="lg"
-              onClick={() => navigate("/auth")}
-              className="flex items-center gap-2"
-            >
-              <UserCircle className="w-5 h-5" />
-              Sign In / Register
-            </Button>
-            <Button 
-              variant="outline" 
-              size="lg"
-              onClick={() => navigate("/cars")}
-              className="flex items-center gap-2"
-            >
-              <Car className="w-5 h-5" />
-              Browse Cars
-            </Button>
-          </div>
-        </div>
+          {/* User Type Selection Cards */}
+          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto mb-12">
+            {/* Customer Card */}
+            <Card className="hover:shadow-lg transition-shadow">
+              <CardHeader>
+                <CardTitle className="flex items-center justify-center gap-2">
+                  <User className="w-6 h-6" />
+                  Customer
+                </CardTitle>
+                <CardDescription>
+                  Looking to rent a car?
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-gray-600">
+                  Browse and book cars for your next journey
+                </p>
+                <div className="space-y-2">
+                  <Button 
+                    className="w-full"
+                    onClick={() => navigate("/auth")}
+                  >
+                    Sign In / Register as Customer
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={() => navigate("/cars")}
+                  >
+                    Browse Available Cars
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
 
-        {/* Features Section */}
-        <div className="mt-20 grid md:grid-cols-3 gap-8">
-          <FeatureCard 
-            title="Wide Selection"
-            description="Choose from a variety of cars to match your needs and budget"
-            icon={<Car className="w-8 h-8 text-blue-500" />}
-          />
-          <FeatureCard 
-            title="Easy Booking"
-            description="Simple and secure booking process with instant confirmation"
-            icon={<Car className="w-8 h-8 text-blue-500" />}
-          />
-          <FeatureCard 
-            title="Flexible Rentals"
-            description="Rent cars by the day, week, or month with competitive rates"
-            icon={<Car className="w-8 h-8 text-blue-500" />}
-          />
+            {/* Service Provider Card */}
+            <Card className="hover:shadow-lg transition-shadow">
+              <CardHeader>
+                <CardTitle className="flex items-center justify-center gap-2">
+                  <Truck className="w-6 h-6" />
+                  Service Provider
+                </CardTitle>
+                <CardDescription>
+                  Want to rent out your cars?
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-gray-600">
+                  Register as a service provider to list and manage your cars
+                </p>
+                <div className="space-y-2">
+                  <Button 
+                    className="w-full"
+                    onClick={() => navigate("/provider/auth")}
+                  >
+                    Sign In / Register as Provider
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={() => navigate("/provider/dashboard")}
+                  >
+                    Provider Dashboard
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Features Section */}
+          <div className="mt-20 grid md:grid-cols-3 gap-8">
+            <FeatureCard 
+              title="Wide Selection"
+              description="Choose from a variety of cars to match your needs and budget"
+              icon={<Car className="w-8 h-8 text-blue-500" />}
+            />
+            <FeatureCard 
+              title="Easy Booking"
+              description="Simple and secure booking process with instant confirmation"
+              icon={<Car className="w-8 h-8 text-blue-500" />}
+            />
+            <FeatureCard 
+              title="Flexible Rentals"
+              description="Rent cars by the day, week, or month with competitive rates"
+              icon={<Car className="w-8 h-8 text-blue-500" />}
+            />
+          </div>
         </div>
       </div>
     </div>
