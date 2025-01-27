@@ -2,23 +2,110 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { Car, UserCircle, Truck, User } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
   const navigate = useNavigate();
+  const [session, setSession] = useState<any>(null);
+  const [userProfile, setUserProfile] = useState<any>(null);
 
+  useEffect(() => {
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      if (session?.user?.id) {
+        fetchUserProfile(session.user.id);
+      }
+    });
+
+    // Listen for auth changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (session?.user?.id) {
+        fetchUserProfile(session.user.id);
+      } else {
+        setUserProfile(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const fetchUserProfile = async (userId: string) => {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", userId)
+      .single();
+
+    if (!error && data) {
+      setUserProfile(data);
+    }
+  };
+
+  if (session && userProfile) {
+    // Show different content based on user role
+    if (userProfile.role === "provider") {
+      return (
+        <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
+          <div className="container mx-auto px-4 py-16">
+            <div className="text-center">
+              <h1 className="text-4xl font-bold text-gray-900 mb-6">
+                Welcome to Wildfloc, {userProfile.full_name}
+              </h1>
+              <p className="text-xl text-gray-600 mb-8">
+                Manage your car listings and bookings
+              </p>
+              <Button 
+                className="w-full max-w-md mx-auto"
+                onClick={() => navigate("/provider/dashboard")}
+              >
+                Go to Provider Dashboard
+              </Button>
+            </div>
+          </div>
+        </div>
+      );
+    } else {
+      // Customer view
+      return (
+        <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
+          <div className="container mx-auto px-4 py-16">
+            <div className="text-center">
+              <h1 className="text-4xl font-bold text-gray-900 mb-6">
+                Welcome to Wildfloc, {userProfile.full_name}
+              </h1>
+              <p className="text-xl text-gray-600 mb-8">
+                Find the perfect car for your journey
+              </p>
+              <Button 
+                className="w-full max-w-md mx-auto"
+                onClick={() => navigate("/cars")}
+              >
+                Browse Available Cars
+              </Button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+  }
+
+  // Not logged in view
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
-      {/* Hero Section */}
       <div className="container mx-auto px-4 py-16">
         <div className="text-center">
           <h1 className="text-4xl font-bold text-gray-900 mb-6">
-            CabConnecto - Your Trusted Car Rental Platform
+            Wildfloc - Your Trusted Car Rental Platform
           </h1>
           <p className="text-xl text-gray-600 mb-8">
             Find the perfect car for your journey, or rent out your vehicle to earn extra income
           </p>
           
-          {/* User Type Selection Cards */}
           <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto mb-12">
             {/* Customer Card */}
             <Card className="hover:shadow-lg transition-shadow">
