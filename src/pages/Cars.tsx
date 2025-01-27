@@ -29,6 +29,11 @@ const Cars = () => {
           *,
           profiles (
             full_name
+          ),
+          car_availability (
+            start_date,
+            end_date,
+            is_available
           )
         `);
 
@@ -37,55 +42,19 @@ const Cars = () => {
     },
   });
 
-  const handleBooking = async (carId: string, ratePerDay: number) => {
-    const { data: { user } } = await supabase.auth.getUser();
+  const isCarAvailable = (car: any) => {
+    if (!selectedDates.from || !selectedDates.to) return true;
     
-    if (!user) {
-      toast({
-        title: "Authentication required",
-        description: "Please sign in to book a car",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (!selectedDates.from || !selectedDates.to) {
-      toast({
-        title: "Select dates",
-        description: "Please select both start and end dates",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const days = differenceInDays(selectedDates.to, selectedDates.from) + 1;
-    const totalAmount = days * ratePerDay;
-
-    const { error } = await supabase
-      .from('bookings')
-      .insert({
-        car_id: carId,
-        customer_id: user.id,
-        start_date: selectedDates.from.toISOString(),
-        end_date: selectedDates.to.toISOString(),
-        total_amount: totalAmount,
-      });
-
-    if (error) {
-      toast({
-        title: "Booking failed",
-        description: error.message,
-        variant: "destructive"
-      });
-      return;
-    }
-
-    toast({
-      title: "Booking successful",
-      description: `Your booking has been confirmed for ${days} days. Total: $${totalAmount}`,
+    // Check if there's any availability record that covers the selected dates
+    return car.car_availability?.some((availability: any) => {
+      const availStart = new Date(availability.start_date);
+      const availEnd = new Date(availability.end_date);
+      return (
+        availability.is_available &&
+        availStart <= selectedDates.from! &&
+        availEnd >= selectedDates.to!
+      );
     });
-
-    setSelectedDates({ from: undefined, to: undefined });
   };
 
   if (isLoading) {
@@ -151,33 +120,40 @@ const Cars = () => {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {cars?.map((car) => (
-          <Card key={car.id} className="overflow-hidden">
-            <CardHeader className="p-0">
-              <div className="h-48 bg-gray-200 flex items-center justify-center">
-                <Car className="h-24 w-24 text-gray-400" />
-              </div>
-            </CardHeader>
-            <CardContent className="p-6">
-              <CardTitle className="flex justify-between items-start mb-2">
-                <span>{car.model} ({car.year})</span>
-                <span className="text-green-600">${car.rate_per_day}/day</span>
-              </CardTitle>
-              <div className="space-y-2 text-sm text-muted-foreground">
-                <p>Provider: {car.profiles.full_name}</p>
-                <p>Seats: {car.seats}</p>
-                <p>License: {car.license_plate}</p>
-                {car.description && <p>{car.description}</p>}
-              </div>
-              <Button 
-                className="w-full mt-4"
-                onClick={() => handleBooking(car.id, car.rate_per_day)}
-              >
-                Book Now
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
+        {cars?.map((car) => {
+          const available = isCarAvailable(car);
+          return (
+            <Card key={car.id} className="overflow-hidden">
+              <CardHeader className="p-0">
+                <div className="h-48 bg-gray-200 flex items-center justify-center">
+                  <Car className="h-24 w-24 text-gray-400" />
+                </div>
+              </CardHeader>
+              <CardContent className="p-6">
+                <CardTitle className="flex justify-between items-start mb-2">
+                  <span>{car.model} ({car.year})</span>
+                  <span className="text-green-600">${car.rate_per_day}/day</span>
+                </CardTitle>
+                <div className="space-y-2 text-sm text-muted-foreground">
+                  <p>Provider: {car.profiles.full_name}</p>
+                  <p>Seats: {car.seats}</p>
+                  <p>License: {car.license_plate}</p>
+                  {car.description && <p>{car.description}</p>}
+                  <p className={available ? "text-green-600" : "text-red-600"}>
+                    {available ? "Available" : "Not available"} for selected dates
+                  </p>
+                </div>
+                <Button 
+                  className="w-full mt-4"
+                  onClick={() => handleBooking(car.id, car.rate_per_day)}
+                  disabled={!available}
+                >
+                  {available ? "Book Now" : "Not Available"}
+                </Button>
+              </CardContent>
+            </Card>
+          )
+        })}
       </div>
     </div>
   );

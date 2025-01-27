@@ -1,30 +1,29 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster as SonnerToaster } from "sonner";
 import Index from "@/pages/Index";
 import Cars from "@/pages/Cars";
 import Auth from "@/pages/Auth";
+import ProviderAuth from "@/pages/ProviderAuth";
+import ProviderDashboard from "@/pages/ProviderDashboard";
 
-const queryClient = new QueryClient();
-
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <div className="min-h-screen bg-background">
+function App() {
+  return (
+    <Router>
+      <TooltipProvider>
+        <Routes>
+          <Route path="/" element={<Index />} />
+          <Route path="/cars" element={<Cars />} />
+          <Route path="/auth" element={<Auth />} />
+          <Route path="/provider/auth" element={<ProviderAuth />} />
+          <Route path="/provider/dashboard" element={<ProviderDashboard />} />
+        </Routes>
         <Toaster />
         <SonnerToaster />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/cars" element={<Cars />} />
-            <Route path="/auth" element={<Auth />} />
-          </Routes>
-        </BrowserRouter>
-      </div>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+      </TooltipProvider>
+    </Router>
+  );
+}
 
 export default App;
