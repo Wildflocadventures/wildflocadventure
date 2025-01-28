@@ -8,11 +8,21 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { LogOut } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format } from "date-fns";
 
 const ProviderDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [cars, setCars] = useState<any[]>([]);
+  const [selectedCar, setSelectedCar] = useState<string | null>(null);
+  const [availabilityDates, setAvailabilityDates] = useState<{
+    from: Date | undefined;
+    to: Date | undefined;
+  }>({
+    from: undefined,
+    to: undefined,
+  });
   const [newCar, setNewCar] = useState({
     model: "",
     year: "",
@@ -21,14 +31,6 @@ const ProviderDashboard = () => {
     rate_per_day: "",
     description: ""
   });
-  const [selectedDates, setSelectedDates] = useState<{
-    from: Date | undefined;
-    to: Date | undefined;
-  }>({
-    from: undefined,
-    to: undefined,
-  });
-  const [selectedCar, setSelectedCar] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchCars = async () => {
@@ -40,7 +42,14 @@ const ProviderDashboard = () => {
 
       const { data: cars, error } = await supabase
         .from("cars")
-        .select("*")
+        .select(`
+          *,
+          car_availability (
+            start_date,
+            end_date,
+            is_available
+          )
+        `)
         .eq("provider_id", user.id);
 
       if (error) {
@@ -66,7 +75,7 @@ const ProviderDashboard = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { data, error } = await supabase
+    const { data: carData, error: carError } = await supabase
       .from("cars")
       .insert({
         provider_id: user.id,
@@ -80,6 +89,49 @@ const ProviderDashboard = () => {
       .select()
       .single();
 
+    if (carError) {
+      toast({
+        title: "Error",
+        description: carError.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "Car added successfully. Please set its availability.",
+      });
+      setCars([...cars, carData]);
+      setSelectedCar(carData.id);
+      setNewCar({
+        model: "",
+        year: "",
+        license_plate: "",
+        seats: "",
+        rate_per_day: "",
+        description: ""
+      });
+    }
+  };
+
+  const handleSetAvailability = async () => {
+    if (!selectedCar || !availabilityDates.from || !availabilityDates.to) {
+      toast({
+        title: "Error",
+        description: "Please select a car and availability dates",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const { error } = await supabase
+      .from("car_availability")
+      .insert({
+        car_id: selectedCar,
+        start_date: availabilityDates.from.toISOString(),
+        end_date: availabilityDates.to.toISOString(),
+        is_available: true
+      });
+
     if (error) {
       toast({
         title: "Error",
@@ -89,17 +141,27 @@ const ProviderDashboard = () => {
     } else {
       toast({
         title: "Success",
-        description: "Car added successfully",
+        description: "Car availability set successfully",
       });
-      setCars([...cars, data]);
-      setNewCar({
-        model: "",
-        year: "",
-        license_plate: "",
-        seats: "",
-        rate_per_day: "",
-        description: ""
-      });
+      // Refresh cars list
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: updatedCars } = await supabase
+        .from("cars")
+        .select(`
+          *,
+          car_availability (
+            start_date,
+            end_date,
+            is_available
+          )
+        `)
+        .eq("provider_id", user?.id);
+      
+      if (updatedCars) {
+        setCars(updatedCars);
+      }
+      setSelectedCar(null);
+      setAvailabilityDates({ from: undefined, to: undefined });
     }
   };
 
@@ -185,6 +247,77 @@ const ProviderDashboard = () => {
 
         <Card>
           <CardHeader>
+            <CardTitle>Set Car Availability</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label>Select Car</Label>
+              <select
+                className="w-full p-2 border rounded"
+                value={selectedCar || ""}
+                onChange={(e) => setSelectedCar(e.target.value)}
+              >
+                <option value="">Select a car</option>
+                {cars.map((car) => (
+                  <option key={car.id} value={car.id}>
+                    {car.model} ({car.license_plate})
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Select Availability Dates</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full justify-start text-left font-normal">
+                    {availabilityDates.from ? (
+                      availabilityDates.to ? (
+                        <>
+                          {format(availabilityDates.from, "LLL dd, y")} -{" "}
+                          {format(availabilityDates.to, "LLL dd, y")}
+                        </>
+                      ) : (
+                        format(availabilityDates.from, "LLL dd, y")
+                      )
+                    ) : (
+                      <span>Pick dates</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    initialFocus
+                    mode="range"
+                    defaultMonth={availabilityDates.from}
+                    selected={{
+                      from: availabilityDates.from,
+                      to: availabilityDates.to,
+                    }}
+                    onSelect={(range) => {
+                      setAvailabilityDates({
+                        from: range?.from,
+                        to: range?.to,
+                      });
+                    }}
+                    numberOfMonths={2}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            
+            <Button 
+              onClick={handleSetAvailability}
+              className="w-full"
+              disabled={!selectedCar || !availabilityDates.from || !availabilityDates.to}
+            >
+              Set Availability
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="md:col-span-2">
+          <CardHeader>
             <CardTitle>Your Cars</CardTitle>
           </CardHeader>
           <CardContent>
@@ -198,6 +331,20 @@ const ProviderDashboard = () => {
                   {car.description && (
                     <p className="text-sm text-gray-600 mt-2">{car.description}</p>
                   )}
+                  <div className="mt-2">
+                    <h4 className="font-medium text-sm">Availability Periods:</h4>
+                    {car.car_availability && car.car_availability.length > 0 ? (
+                      <ul className="list-disc list-inside">
+                        {car.car_availability.map((availability: any, index: number) => (
+                          <li key={index} className="text-sm text-gray-600">
+                            {format(new Date(availability.start_date), "LLL dd, y")} - {format(new Date(availability.end_date), "LLL dd, y")}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-sm text-red-500">No availability set</p>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

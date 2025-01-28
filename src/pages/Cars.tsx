@@ -134,6 +134,9 @@ const Cars = () => {
     );
   }
 
+  // Filter out cars with no availability set
+  const availableCars = cars?.filter(car => car.car_availability && car.car_availability.length > 0) || [];
+
   return (
     <div className="container py-8">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
@@ -179,7 +182,7 @@ const Cars = () => {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {cars?.map((car) => {
+        {availableCars.map((car) => {
           const available = isCarAvailable(car);
           return (
             <Card key={car.id} className="overflow-hidden">
