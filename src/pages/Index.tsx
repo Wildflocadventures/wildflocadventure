@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { Car, UserCircle, Truck, User } from "lucide-react";
+import { Car, UserCircle, Truck, User, LogOut } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -46,11 +46,28 @@ const Index = () => {
     }
   };
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate('/');
+  };
+
+  const LogoutButton = () => (
+    <Button 
+      variant="outline" 
+      className="absolute top-4 right-4"
+      onClick={handleLogout}
+    >
+      <LogOut className="w-4 h-4 mr-2" />
+      Logout
+    </Button>
+  );
+
   if (session && userProfile) {
     // Show different content based on user role
     if (userProfile.role === "provider") {
       return (
-        <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
+        <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white relative">
+          <LogoutButton />
           <div className="container mx-auto px-4 py-16">
             <div className="text-center">
               <h1 className="text-4xl font-bold text-gray-900 mb-6">
@@ -72,7 +89,8 @@ const Index = () => {
     } else {
       // Customer view
       return (
-        <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
+        <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white relative">
+          <LogoutButton />
           <div className="container mx-auto px-4 py-16">
             <div className="text-center">
               <h1 className="text-4xl font-bold text-gray-900 mb-6">

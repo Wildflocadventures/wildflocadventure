@@ -3,13 +3,24 @@ import { useNavigate } from "react-router-dom";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { LogOut } from "lucide-react";
 
 const ProviderDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [cars, setCars] = useState<any[]>([]);
+  const [newCar, setNewCar] = useState({
+    model: "",
+    year: "",
+    license_plate: "",
+    seats: "",
+    rate_per_day: "",
+    description: ""
+  });
   const [selectedDates, setSelectedDates] = useState<{
     from: Date | undefined;
     to: Date | undefined;
@@ -46,24 +57,28 @@ const ProviderDashboard = () => {
     fetchCars();
   }, []);
 
-  const handleSetAvailability = async () => {
-    if (!selectedCar || !selectedDates.from || !selectedDates.to) {
-      toast({
-        title: "Error",
-        description: "Please select a car and date range",
-        variant: "destructive",
-      });
-      return;
-    }
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate('/');
+  };
 
-    const { error } = await supabase
-      .from("car_availability")
+  const handleAddCar = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from("cars")
       .insert({
-        car_id: selectedCar,
-        start_date: selectedDates.from.toISOString(),
-        end_date: selectedDates.to.toISOString(),
-        is_available: true,
-      });
+        provider_id: user.id,
+        model: newCar.model,
+        year: parseInt(newCar.year),
+        license_plate: newCar.license_plate,
+        seats: parseInt(newCar.seats),
+        rate_per_day: parseFloat(newCar.rate_per_day),
+        description: newCar.description
+      })
+      .select()
+      .single();
 
     if (error) {
       toast({
@@ -74,57 +89,96 @@ const ProviderDashboard = () => {
     } else {
       toast({
         title: "Success",
-        description: "Car availability has been set",
+        description: "Car added successfully",
       });
-      setSelectedDates({ from: undefined, to: undefined });
+      setCars([...cars, data]);
+      setNewCar({
+        model: "",
+        year: "",
+        license_plate: "",
+        seats: "",
+        rate_per_day: "",
+        description: ""
+      });
     }
   };
 
   return (
-    <div className="container py-8">
+    <div className="container py-8 relative">
+      <Button 
+        variant="outline" 
+        className="absolute top-4 right-4"
+        onClick={handleLogout}
+      >
+        <LogOut className="w-4 h-4 mr-2" />
+        Logout
+      </Button>
+
       <h1 className="text-3xl font-bold mb-8">Provider Dashboard</h1>
       
       <div className="grid md:grid-cols-2 gap-8">
         <Card>
           <CardHeader>
-            <CardTitle>Set Car Availability</CardTitle>
+            <CardTitle>Add New Car</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Select Car</label>
-              <select
-                className="w-full p-2 border rounded"
-                onChange={(e) => setSelectedCar(e.target.value)}
-                value={selectedCar || ""}
-              >
-                <option value="">Select a car</option>
-                {cars.map((car) => (
-                  <option key={car.id} value={car.id}>
-                    {car.model} ({car.license_plate})
-                  </option>
-                ))}
-              </select>
-            </div>
-            
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Select Available Dates</label>
-              <Calendar
-                mode="range"
-                selected={{
-                  from: selectedDates.from,
-                  to: selectedDates.to,
-                }}
-                onSelect={(range: any) => setSelectedDates(range)}
-                className="rounded-md border"
+              <Label>Car Model</Label>
+              <Input
+                value={newCar.model}
+                onChange={(e) => setNewCar({...newCar, model: e.target.value})}
+                placeholder="e.g. Toyota Camry"
               />
             </div>
-
+            <div className="space-y-2">
+              <Label>Year</Label>
+              <Input
+                type="number"
+                value={newCar.year}
+                onChange={(e) => setNewCar({...newCar, year: e.target.value})}
+                placeholder="e.g. 2020"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>License Plate</Label>
+              <Input
+                value={newCar.license_plate}
+                onChange={(e) => setNewCar({...newCar, license_plate: e.target.value})}
+                placeholder="e.g. ABC123"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Number of Seats</Label>
+              <Input
+                type="number"
+                value={newCar.seats}
+                onChange={(e) => setNewCar({...newCar, seats: e.target.value})}
+                placeholder="e.g. 5"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Rate per Day ($)</Label>
+              <Input
+                type="number"
+                value={newCar.rate_per_day}
+                onChange={(e) => setNewCar({...newCar, rate_per_day: e.target.value})}
+                placeholder="e.g. 50"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Description</Label>
+              <Input
+                value={newCar.description}
+                onChange={(e) => setNewCar({...newCar, description: e.target.value})}
+                placeholder="Brief description of the car"
+              />
+            </div>
             <Button 
-              onClick={handleSetAvailability}
+              onClick={handleAddCar}
               className="w-full"
-              disabled={!selectedCar || !selectedDates.from || !selectedDates.to}
+              disabled={!newCar.model || !newCar.year || !newCar.license_plate || !newCar.seats || !newCar.rate_per_day}
             >
-              Set Availability
+              Add Car
             </Button>
           </CardContent>
         </Card>
@@ -137,9 +191,13 @@ const ProviderDashboard = () => {
             <div className="space-y-4">
               {cars.map((car) => (
                 <div key={car.id} className="p-4 border rounded">
-                  <h3 className="font-medium">{car.model}</h3>
+                  <h3 className="font-medium">{car.model} ({car.year})</h3>
                   <p className="text-sm text-gray-600">License: {car.license_plate}</p>
                   <p className="text-sm text-gray-600">Rate: ${car.rate_per_day}/day</p>
+                  <p className="text-sm text-gray-600">Seats: {car.seats}</p>
+                  {car.description && (
+                    <p className="text-sm text-gray-600 mt-2">{car.description}</p>
+                  )}
                 </div>
               ))}
             </div>
