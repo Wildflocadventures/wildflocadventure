@@ -16,7 +16,7 @@ const ProviderDashboard = () => {
   const { toast } = useToast();
   const [cars, setCars] = useState<any[]>([]);
   const [selectedCar, setSelectedCar] = useState<string | null>(null);
-  const [availabilityDates, setAvailabilityDates] = useState<{
+  const [unavailabilityDates, setUnavailabilityDates] = useState<{
     from: Date | undefined;
     to: Date | undefined;
   }>({
@@ -98,7 +98,7 @@ const ProviderDashboard = () => {
     } else {
       toast({
         title: "Success",
-        description: "Car added successfully. Please set its availability.",
+        description: "Car added successfully. Please set its unavailability dates.",
       });
       setCars([...cars, carData]);
       setSelectedCar(carData.id);
@@ -113,11 +113,11 @@ const ProviderDashboard = () => {
     }
   };
 
-  const handleSetAvailability = async () => {
-    if (!selectedCar || !availabilityDates.from || !availabilityDates.to) {
+  const handleSetUnavailability = async () => {
+    if (!selectedCar || !unavailabilityDates.from || !unavailabilityDates.to) {
       toast({
         title: "Error",
-        description: "Please select a car and availability dates",
+        description: "Please select a car and unavailability dates",
         variant: "destructive",
       });
       return;
@@ -127,9 +127,9 @@ const ProviderDashboard = () => {
       .from("car_availability")
       .insert({
         car_id: selectedCar,
-        start_date: availabilityDates.from.toISOString(),
-        end_date: availabilityDates.to.toISOString(),
-        is_available: true
+        start_date: unavailabilityDates.from.toISOString(),
+        end_date: unavailabilityDates.to.toISOString(),
+        is_available: false // Set to false since these are unavailability dates
       });
 
     if (error) {
@@ -141,7 +141,7 @@ const ProviderDashboard = () => {
     } else {
       toast({
         title: "Success",
-        description: "Car availability set successfully",
+        description: "Car unavailability dates set successfully",
       });
       // Refresh cars list
       const { data: { user } } = await supabase.auth.getUser();
@@ -161,7 +161,7 @@ const ProviderDashboard = () => {
         setCars(updatedCars);
       }
       setSelectedCar(null);
-      setAvailabilityDates({ from: undefined, to: undefined });
+      setUnavailabilityDates({ from: undefined, to: undefined });
     }
   };
 
@@ -247,7 +247,7 @@ const ProviderDashboard = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Set Car Availability</CardTitle>
+            <CardTitle>Set Car Unavailability</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
@@ -267,21 +267,21 @@ const ProviderDashboard = () => {
             </div>
             
             <div className="space-y-2">
-              <Label>Select Availability Dates</Label>
+              <Label>Select Dates When Car is NOT Available</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="w-full justify-start text-left font-normal">
-                    {availabilityDates.from ? (
-                      availabilityDates.to ? (
+                    {unavailabilityDates.from ? (
+                      unavailabilityDates.to ? (
                         <>
-                          {format(availabilityDates.from, "LLL dd, y")} -{" "}
-                          {format(availabilityDates.to, "LLL dd, y")}
+                          {format(unavailabilityDates.from, "LLL dd, y")} -{" "}
+                          {format(unavailabilityDates.to, "LLL dd, y")}
                         </>
                       ) : (
-                        format(availabilityDates.from, "LLL dd, y")
+                        format(unavailabilityDates.from, "LLL dd, y")
                       )
                     ) : (
-                      <span>Pick dates</span>
+                      <span>Pick unavailability dates</span>
                     )}
                   </Button>
                 </PopoverTrigger>
@@ -289,13 +289,13 @@ const ProviderDashboard = () => {
                   <Calendar
                     initialFocus
                     mode="range"
-                    defaultMonth={availabilityDates.from}
+                    defaultMonth={unavailabilityDates.from}
                     selected={{
-                      from: availabilityDates.from,
-                      to: availabilityDates.to,
+                      from: unavailabilityDates.from,
+                      to: unavailabilityDates.to,
                     }}
                     onSelect={(range) => {
-                      setAvailabilityDates({
+                      setUnavailabilityDates({
                         from: range?.from,
                         to: range?.to,
                       });
@@ -307,11 +307,11 @@ const ProviderDashboard = () => {
             </div>
             
             <Button 
-              onClick={handleSetAvailability}
+              onClick={handleSetUnavailability}
               className="w-full"
-              disabled={!selectedCar || !availabilityDates.from || !availabilityDates.to}
+              disabled={!selectedCar || !unavailabilityDates.from || !unavailabilityDates.to}
             >
-              Set Availability
+              Set Unavailability
             </Button>
           </CardContent>
         </Card>
@@ -332,17 +332,19 @@ const ProviderDashboard = () => {
                     <p className="text-sm text-gray-600 mt-2">{car.description}</p>
                   )}
                   <div className="mt-2">
-                    <h4 className="font-medium text-sm">Availability Periods:</h4>
+                    <h4 className="font-medium text-sm">Unavailable Periods:</h4>
                     {car.car_availability && car.car_availability.length > 0 ? (
                       <ul className="list-disc list-inside">
-                        {car.car_availability.map((availability: any, index: number) => (
-                          <li key={index} className="text-sm text-gray-600">
+                        {car.car_availability
+                          .filter((availability: any) => !availability.is_available)
+                          .map((availability: any, index: number) => (
+                          <li key={index} className="text-sm text-red-600">
                             {format(new Date(availability.start_date), "LLL dd, y")} - {format(new Date(availability.end_date), "LLL dd, y")}
                           </li>
                         ))}
                       </ul>
                     ) : (
-                      <p className="text-sm text-red-500">No availability set</p>
+                      <p className="text-sm text-green-500">No unavailability periods set</p>
                     )}
                   </div>
                 </div>
