@@ -6,9 +6,19 @@ import { Calendar } from "@/components/ui/calendar";
 import { Car, Calendar as CalendarIcon } from "lucide-react";
 import { useState } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { format, isWithinInterval } from "date-fns";
+import { format, isWithinInterval, differenceInDays } from "date-fns";
 import { cn } from "@/lib/utils";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 const Cars = () => {
   const { toast } = useToast();
@@ -20,7 +30,20 @@ const Cars = () => {
     to: undefined,
   });
 
-  const { data: cars, isLoading } = useQuery({
+  const [bookingDialog, setBookingDialog] = useState<{
+    isOpen: boolean;
+    carId: string;
+    ratePerDay: number;
+    model: string;
+  }>({
+    isOpen: false,
+    carId: "",
+    ratePerDay: 0,
+    model: "",
+  });
+
+  // Query for cars
+  const { data: cars, isLoading: carsLoading } = useQuery({
     queryKey: ["cars"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -42,7 +65,53 @@ const Cars = () => {
     },
   });
 
-  const handleBooking = async (carId: string, ratePerDay: number) => {
+  // Query for user's bookings
+  const { data: userBookings, isLoading: bookingsLoading } = useQuery({
+    queryKey: ["bookings"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+
+      const { data, error } = await supabase
+        .from("bookings")
+        .select(`
+          *,
+          cars (
+            model,
+            license_plate,
+            provider_id,
+            profiles (
+              full_name
+            )
+          )
+        `)
+        .eq('customer_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const handleBookingDialog = (carId: string, ratePerDay: number, model: string) => {
+    if (!selectedDates.from || !selectedDates.to) {
+      toast({
+        title: "Error",
+        description: "Please select booking dates first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setBookingDialog({
+      isOpen: true,
+      carId,
+      ratePerDay,
+      model,
+    });
+  };
+
+  const handleBooking = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       
@@ -64,25 +133,13 @@ const Cars = () => {
         return;
       }
 
-      // Check if the car is available for the selected dates
-      const isAvailable = isCarAvailable({ id: carId, car_availability: cars?.find(c => c.id === carId)?.car_availability });
-      
-      if (!isAvailable) {
-        toast({
-          title: "Error",
-          description: "Car is not available for the selected dates",
-          variant: "destructive",
-        });
-        return;
-      }
-
       const days = Math.ceil((selectedDates.to.getTime() - selectedDates.from.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-      const totalAmount = days * ratePerDay;
+      const totalAmount = days * bookingDialog.ratePerDay;
 
       const { data, error } = await supabase
         .from("bookings")
         .insert({
-          car_id: carId,
+          car_id: bookingDialog.carId,
           customer_id: user.id,
           start_date: selectedDates.from.toISOString(),
           end_date: selectedDates.to.toISOString(),
@@ -101,9 +158,10 @@ const Cars = () => {
         return;
       }
 
+      setBookingDialog(prev => ({ ...prev, isOpen: false }));
       toast({
         title: "Success",
-        description: "Car booked successfully!",
+        description: "Car booked successfully! Please proceed with the payment.",
       });
     } catch (error: any) {
       toast({
@@ -117,14 +175,12 @@ const Cars = () => {
   const isCarAvailable = (car: any) => {
     if (!selectedDates.from || !selectedDates.to || !car?.car_availability) return true;
     
-    // Check if the car has any unavailability periods that overlap with the selected dates
     const hasUnavailabilityConflict = car.car_availability.some((availability: any) => {
-      if (availability.is_available) return false; // Skip availability periods, we only care about unavailability
+      if (availability.is_available) return false;
       
       const availStart = new Date(availability.start_date);
       const availEnd = new Date(availability.end_date);
       
-      // Check if there's any overlap between the selected dates and unavailability period
       return (
         (selectedDates.from <= availEnd && selectedDates.to >= availStart) ||
         (selectedDates.from >= availStart && selectedDates.from <= availEnd) ||
@@ -135,7 +191,7 @@ const Cars = () => {
     return !hasUnavailabilityConflict;
   };
 
-  if (isLoading) {
+  if (carsLoading) {
     return (
       <div className="container py-8">
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -199,7 +255,8 @@ const Cars = () => {
         </Popover>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      {/* Available Cars Section */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-12">
         {availableCars.map((car) => (
           <Card key={car.id} className="overflow-hidden">
             <CardHeader className="p-0">
@@ -223,7 +280,7 @@ const Cars = () => {
               </div>
               <Button 
                 className="w-full mt-4"
-                onClick={() => handleBooking(car.id, car.rate_per_day)}
+                onClick={() => handleBookingDialog(car.id, car.rate_per_day, car.model)}
               >
                 Book Now
               </Button>
@@ -231,6 +288,75 @@ const Cars = () => {
           </Card>
         ))}
       </div>
+
+      {/* User's Bookings Section */}
+      <div className="mt-12">
+        <h2 className="text-2xl font-bold mb-6">Your Bookings</h2>
+        {bookingsLoading ? (
+          <p>Loading your bookings...</p>
+        ) : userBookings && userBookings.length > 0 ? (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {userBookings.map((booking) => (
+              <Card key={booking.id}>
+                <CardContent className="p-6">
+                  <h3 className="font-semibold mb-2">{booking.cars.model}</h3>
+                  <div className="space-y-2 text-sm text-muted-foreground">
+                    <p>Provider: {booking.cars.profiles.full_name}</p>
+                    <p>Dates: {format(new Date(booking.start_date), "LLL dd, y")} - {format(new Date(booking.end_date), "LLL dd, y")}</p>
+                    <p>Total Amount: ${booking.total_amount}</p>
+                    <p>Status: <span className="capitalize">{booking.status}</span></p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <p className="text-muted-foreground">No bookings found.</p>
+        )}
+      </div>
+
+      {/* Booking Confirmation Dialog */}
+      <Dialog open={bookingDialog.isOpen} onOpenChange={(open) => setBookingDialog(prev => ({ ...prev, isOpen: open }))}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Booking</DialogTitle>
+            <DialogDescription>
+              Please review your booking details below
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <h4 className="font-medium">{bookingDialog.model}</h4>
+              <p className="text-sm text-muted-foreground">
+                Dates: {selectedDates.from && selectedDates.to ? (
+                  `${format(selectedDates.from, "LLL dd, y")} - ${format(selectedDates.to, "LLL dd, y")}`
+                ) : "No dates selected"}
+              </p>
+              {selectedDates.from && selectedDates.to && (
+                <p className="text-sm text-muted-foreground">
+                  Duration: {differenceInDays(selectedDates.to, selectedDates.from) + 1} days
+                </p>
+              )}
+              <p className="text-sm font-medium">
+                Total Amount: ${selectedDates.from && selectedDates.to ? 
+                  (differenceInDays(selectedDates.to, selectedDates.from) + 1) * bookingDialog.ratePerDay : 
+                  0
+                }
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBookingDialog(prev => ({ ...prev, isOpen: false }))}>
+              Cancel
+            </Button>
+            <Button onClick={handleBooking}>
+              Confirm Booking
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
