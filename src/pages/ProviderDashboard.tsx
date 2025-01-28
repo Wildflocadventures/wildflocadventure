@@ -7,15 +7,23 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { LogOut } from "lucide-react";
+import { LogOut, Edit2, X } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 const ProviderDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [cars, setCars] = useState<any[]>([]);
   const [selectedCar, setSelectedCar] = useState<string | null>(null);
+  const [editingCar, setEditingCar] = useState<any>(null);
   const [unavailabilityDates, setUnavailabilityDates] = useState<{
     from: Date | undefined;
     to: Date | undefined;
@@ -113,6 +121,53 @@ const ProviderDashboard = () => {
     }
   };
 
+  const handleUpdateCar = async () => {
+    if (!editingCar) return;
+
+    const { error } = await supabase
+      .from("cars")
+      .update({
+        model: editingCar.model,
+        year: parseInt(editingCar.year),
+        license_plate: editingCar.license_plate,
+        seats: parseInt(editingCar.seats),
+        rate_per_day: parseFloat(editingCar.rate_per_day),
+        description: editingCar.description
+      })
+      .eq('id', editingCar.id);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update car details",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "Car details updated successfully",
+      });
+      // Refresh cars list
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: updatedCars } = await supabase
+        .from("cars")
+        .select(`
+          *,
+          car_availability (
+            start_date,
+            end_date,
+            is_available
+          )
+        `)
+        .eq("provider_id", user?.id);
+      
+      if (updatedCars) {
+        setCars(updatedCars);
+      }
+      setEditingCar(null);
+    }
+  };
+
   const handleSetUnavailability = async () => {
     if (!selectedCar || !unavailabilityDates.from || !unavailabilityDates.to) {
       toast({
@@ -129,7 +184,7 @@ const ProviderDashboard = () => {
         car_id: selectedCar,
         start_date: unavailabilityDates.from.toISOString(),
         end_date: unavailabilityDates.to.toISOString(),
-        is_available: false // Set to false since these are unavailability dates
+        is_available: false
       });
 
     if (error) {
@@ -323,7 +378,77 @@ const ProviderDashboard = () => {
           <CardContent>
             <div className="space-y-4">
               {cars.map((car) => (
-                <div key={car.id} className="p-4 border rounded">
+                <div key={car.id} className="p-4 border rounded relative">
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        className="absolute top-2 right-2"
+                        onClick={() => setEditingCar(car)}
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Edit Car Details</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                          <Label>Car Model</Label>
+                          <Input
+                            value={editingCar?.model || ''}
+                            onChange={(e) => setEditingCar({...editingCar, model: e.target.value})}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Year</Label>
+                          <Input
+                            type="number"
+                            value={editingCar?.year || ''}
+                            onChange={(e) => setEditingCar({...editingCar, year: e.target.value})}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>License Plate</Label>
+                          <Input
+                            value={editingCar?.license_plate || ''}
+                            onChange={(e) => setEditingCar({...editingCar, license_plate: e.target.value})}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Number of Seats</Label>
+                          <Input
+                            type="number"
+                            value={editingCar?.seats || ''}
+                            onChange={(e) => setEditingCar({...editingCar, seats: e.target.value})}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Rate per Day ($)</Label>
+                          <Input
+                            type="number"
+                            value={editingCar?.rate_per_day || ''}
+                            onChange={(e) => setEditingCar({...editingCar, rate_per_day: e.target.value})}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Description</Label>
+                          <Input
+                            value={editingCar?.description || ''}
+                            onChange={(e) => setEditingCar({...editingCar, description: e.target.value})}
+                          />
+                        </div>
+                        <Button 
+                          onClick={handleUpdateCar}
+                          className="w-full"
+                        >
+                          Update Car
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
                   <h3 className="font-medium">{car.model} ({car.year})</h3>
                   <p className="text-sm text-gray-600">License: {car.license_plate}</p>
                   <p className="text-sm text-gray-600">Rate: ${car.rate_per_day}/day</p>
