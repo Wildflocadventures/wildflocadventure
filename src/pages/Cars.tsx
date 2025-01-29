@@ -2,12 +2,9 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import { Car, Calendar as CalendarIcon } from "lucide-react";
+import { Car } from "lucide-react";
 import { useState } from "react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { format, isWithinInterval, differenceInDays } from "date-fns";
-import { cn } from "@/lib/utils";
+import { format, isWithinInterval } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -17,8 +14,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { DateTimeRangePicker } from "@/components/DateTimeRangePicker";
 
 const Cars = () => {
   const { toast } = useToast();
@@ -42,7 +38,6 @@ const Cars = () => {
     model: "",
   });
 
-  // Query for cars
   const { data: cars, isLoading: carsLoading } = useQuery({
     queryKey: ["cars"],
     queryFn: async () => {
@@ -216,43 +211,10 @@ const Cars = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <h1 className="text-3xl font-bold">Available Cars</h1>
         
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" className="w-full md:w-auto">
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {selectedDates.from ? (
-                selectedDates.to ? (
-                  <>
-                    {format(selectedDates.from, "LLL dd, y")} -{" "}
-                    {format(selectedDates.to, "LLL dd, y")}
-                  </>
-                ) : (
-                  format(selectedDates.from, "LLL dd, y")
-                )
-              ) : (
-                <span>Pick dates</span>
-              )}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="end">
-            <Calendar
-              initialFocus
-              mode="range"
-              defaultMonth={selectedDates.from}
-              selected={{
-                from: selectedDates.from,
-                to: selectedDates.to,
-              }}
-              onSelect={(range) => {
-                setSelectedDates({
-                  from: range?.from,
-                  to: range?.to,
-                });
-              }}
-              numberOfMonths={2}
-            />
-          </PopoverContent>
-        </Popover>
+        <DateTimeRangePicker
+          dateRange={selectedDates}
+          onDateRangeChange={setSelectedDates}
+        />
       </div>
 
       {/* Available Cars Section */}
