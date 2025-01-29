@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { LogOut, Edit2, X } from "lucide-react";
+import { LogOut, Edit2 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
 import {
@@ -217,6 +217,76 @@ const ProviderDashboard = () => {
       }
       setSelectedCar(null);
       setUnavailabilityDates({ from: undefined, to: undefined });
+    }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, carId: string) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const filePath = `${carId}/${crypto.randomUUID()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('car_images')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        toast({
+          title: "Error",
+          description: "Failed to upload image",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('car_images')
+        .getPublicUrl(filePath);
+
+      const { error: updateError } = await supabase
+        .from('cars')
+        .update({ image_url: publicUrl })
+        .eq('id', carId);
+
+      if (updateError) {
+        toast({
+          title: "Error",
+          description: "Failed to update car image",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Refresh cars list
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: updatedCars } = await supabase
+        .from("cars")
+        .select(`
+          *,
+          car_availability (
+            start_date,
+            end_date,
+            is_available
+          )
+        `)
+        .eq("provider_id", user?.id);
+      
+      if (updatedCars) {
+        setCars(updatedCars);
+      }
+
+      toast({
+        title: "Success",
+        description: "Car image uploaded successfully",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
     }
   };
 
@@ -440,6 +510,14 @@ const ProviderDashboard = () => {
                             onChange={(e) => setEditingCar({...editingCar, description: e.target.value})}
                           />
                         </div>
+                        <div className="space-y-2">
+                          <Label>Car Image</Label>
+                          <Input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleImageUpload(e, car.id)}
+                          />
+                        </div>
                         <Button 
                           onClick={handleUpdateCar}
                           className="w-full"
@@ -449,13 +527,30 @@ const ProviderDashboard = () => {
                       </div>
                     </DialogContent>
                   </Dialog>
-                  <h3 className="font-medium">{car.model} ({car.year})</h3>
-                  <p className="text-sm text-gray-600">License: {car.license_plate}</p>
-                  <p className="text-sm text-gray-600">Rate: ${car.rate_per_day}/day</p>
-                  <p className="text-sm text-gray-600">Seats: {car.seats}</p>
-                  {car.description && (
-                    <p className="text-sm text-gray-600 mt-2">{car.description}</p>
-                  )}
+
+                  <div className="flex gap-4">
+                    {car.image_url ? (
+                      <img 
+                        src={car.image_url} 
+                        alt={car.model}
+                        className="w-32 h-32 object-cover rounded"
+                      />
+                    ) : (
+                      <div className="w-32 h-32 bg-gray-100 flex items-center justify-center rounded">
+                        <Car className="w-12 h-12 text-gray-400" />
+                      </div>
+                    )}
+                    <div>
+                      <h3 className="font-medium">{car.model} ({car.year})</h3>
+                      <p className="text-sm text-gray-600">License: {car.license_plate}</p>
+                      <p className="text-sm text-gray-600">Rate: ${car.rate_per_day}/day</p>
+                      <p className="text-sm text-gray-600">Seats: {car.seats}</p>
+                      {car.description && (
+                        <p className="text-sm text-gray-600 mt-2">{car.description}</p>
+                      )}
+                    </div>
+                  </div>
+
                   <div className="mt-2">
                     <h4 className="font-medium text-sm">Unavailable Periods:</h4>
                     {car.car_availability && car.car_availability.length > 0 ? (

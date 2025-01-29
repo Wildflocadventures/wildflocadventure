@@ -97,6 +97,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          image_url: string | null
           license_plate: string
           model: string
           provider_id: string
@@ -108,6 +109,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          image_url?: string | null
           license_plate: string
           model: string
           provider_id: string
@@ -119,6 +121,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          image_url?: string | null
           license_plate?: string
           model?: string
           provider_id?: string

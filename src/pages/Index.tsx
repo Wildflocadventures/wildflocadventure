@@ -34,6 +34,13 @@ const Index = () => {
     return () => subscription.unsubscribe();
   }, []);
 
+  useEffect(() => {
+    // Redirect customers directly to cars page
+    if (userProfile?.role === 'customer') {
+      navigate('/cars');
+    }
+  }, [userProfile, navigate]);
+
   const fetchUserProfile = async (userId: string) => {
     const { data, error } = await supabase
       .from("profiles")
@@ -86,30 +93,9 @@ const Index = () => {
           </div>
         </div>
       );
-    } else {
-      // Customer view
-      return (
-        <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white relative">
-          <LogoutButton />
-          <div className="container mx-auto px-4 py-16">
-            <div className="text-center">
-              <h1 className="text-4xl font-bold text-gray-900 mb-6">
-                Welcome to Wildfloc, {userProfile.full_name}
-              </h1>
-              <p className="text-xl text-gray-600 mb-8">
-                Find the perfect car for your journey
-              </p>
-              <Button 
-                className="w-full max-w-md mx-auto"
-                onClick={() => navigate("/cars")}
-              >
-                Browse Available Cars
-              </Button>
-            </div>
-          </div>
-        </div>
-      );
     }
+    // Customer view will redirect to /cars
+    return null;
   }
 
   // Not logged in view
@@ -147,13 +133,6 @@ const Index = () => {
                   >
                     Sign In / Register as Customer
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    className="w-full"
-                    onClick={() => navigate("/cars")}
-                  >
-                    Browse Available Cars
-                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -179,13 +158,6 @@ const Index = () => {
                     onClick={() => navigate("/provider/auth")}
                   >
                     Sign In / Register as Provider
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    className="w-full"
-                    onClick={() => navigate("/provider/dashboard")}
-                  >
-                    Provider Dashboard
                   </Button>
                 </div>
               </CardContent>
