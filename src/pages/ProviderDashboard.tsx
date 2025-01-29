@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { LogOut, Edit2 } from "lucide-react";
+import { LogOut, Edit2, Car } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
 import {
@@ -578,3 +578,4 @@ const ProviderDashboard = () => {
 };
 
 export default ProviderDashboard;
+
