@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Car } from "lucide-react";
 import { useState } from "react";
-import { format, isWithinInterval } from "date-fns";
+import { format, isWithinInterval, differenceInDays } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
