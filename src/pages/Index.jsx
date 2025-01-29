@@ -10,14 +10,11 @@ import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
   const navigate = useNavigate();
-  const [session, setSession] = useState<any>(null);
-  const [userProfile, setUserProfile] = useState<any>(null);
-  const [cars, setCars] = useState<any[]>([]);
+  const [session, setSession] = useState(null);
+  const [userProfile, setUserProfile] = useState(null);
+  const [cars, setCars] = useState([]);
   const { toast } = useToast();
-  const [selectedDates, setSelectedDates] = useState<{
-    from: Date | undefined;
-    to: Date | undefined;
-  }>({
+  const [selectedDates, setSelectedDates] = useState({
     from: undefined,
     to: undefined,
   });
@@ -52,7 +49,7 @@ const Index = () => {
     }
   }, [userProfile]);
 
-  const fetchUserProfile = async (userId: string) => {
+  const fetchUserProfile = async (userId) => {
     const { data, error } = await supabase
       .from("profiles")
       .select("*")
@@ -284,15 +281,7 @@ const Index = () => {
 };
 
 // Feature Card Component
-const FeatureCard = ({ 
-  title, 
-  description, 
-  icon 
-}: { 
-  title: string; 
-  description: string; 
-  icon: React.ReactNode;
-}) => {
+const FeatureCard = ({ title, description, icon }) => {
   return (
     <div className="p-6 bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow">
       <div className="mb-4">
