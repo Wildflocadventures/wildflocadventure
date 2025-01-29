@@ -4,11 +4,23 @@ import { Car, UserCircle, Truck, User, LogOut } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { DateTimeRangePicker } from "@/components/DateTimeRangePicker";
+import { format, isWithinInterval, differenceInDays } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
   const navigate = useNavigate();
   const [session, setSession] = useState<any>(null);
   const [userProfile, setUserProfile] = useState<any>(null);
+  const [cars, setCars] = useState<any[]>([]);
+  const { toast } = useToast();
+  const [selectedDates, setSelectedDates] = useState<{
+    from: Date | undefined;
+    to: Date | undefined;
+  }>({
+    from: undefined,
+    to: undefined,
+  });
 
   useEffect(() => {
     // Get initial session
@@ -35,11 +47,10 @@ const Index = () => {
   }, []);
 
   useEffect(() => {
-    // Redirect customers directly to cars page
     if (userProfile?.role === 'customer') {
-      navigate('/cars');
+      fetchCars();
     }
-  }, [userProfile, navigate]);
+  }, [userProfile]);
 
   const fetchUserProfile = async (userId: string) => {
     const { data, error } = await supabase
@@ -50,6 +61,32 @@ const Index = () => {
 
     if (!error && data) {
       setUserProfile(data);
+    }
+  };
+
+  const fetchCars = async () => {
+    const { data, error } = await supabase
+      .from("cars")
+      .select(`
+        *,
+        profiles (
+          full_name
+        ),
+        car_availability (
+          start_date,
+          end_date,
+          is_available
+        )
+      `);
+
+    if (error) {
+      toast({
+        title: "Error fetching cars",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else if (data) {
+      setCars(data);
     }
   };
 
@@ -70,35 +107,93 @@ const Index = () => {
   );
 
   if (session && userProfile) {
-    // Show different content based on user role
-    if (userProfile.role === "provider") {
+    if (userProfile.role === "customer") {
       return (
         <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white relative">
           <LogoutButton />
           <div className="container mx-auto px-4 py-16">
-            <div className="text-center">
-              <h1 className="text-4xl font-bold text-gray-900 mb-6">
-                Welcome to Wildfloc, {userProfile.full_name}
+            <div className="text-center mb-12">
+              <h1 className="text-4xl font-bold text-gray-900 mb-4">
+                Welcome, {userProfile.full_name}
               </h1>
-              <p className="text-xl text-gray-600 mb-8">
-                Manage your car listings and bookings
-              </p>
-              <Button 
-                className="w-full max-w-md mx-auto"
-                onClick={() => navigate("/provider/dashboard")}
-              >
-                Go to Provider Dashboard
-              </Button>
+              <h2 className="text-2xl text-gray-600 mb-8">
+                Wildfloc Car Rental Service
+              </h2>
+              
+              {/* Date Range Picker */}
+              <div className="w-full max-w-2xl mx-auto mb-12">
+                <DateTimeRangePicker
+                  dateRange={selectedDates}
+                  onDateRangeChange={setSelectedDates}
+                />
+              </div>
+
+              {/* Cars Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {cars.map((car) => (
+                  <Card key={car.id} className="hover:shadow-lg transition-shadow">
+                    <CardHeader>
+                      {car.image_url && (
+                        <div className="w-full h-48 rounded-t-lg overflow-hidden">
+                          <img
+                            src={car.image_url}
+                            alt={`${car.model}`}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
+                      <CardTitle>{car.model} ({car.year})</CardTitle>
+                      <CardDescription>
+                        Provider: {car.profiles.full_name}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        <p>Seats: {car.seats}</p>
+                        <p>License Plate: {car.license_plate}</p>
+                        <p className="font-semibold">
+                          ${car.rate_per_day} per day
+                        </p>
+                        {car.description && (
+                          <p className="text-sm text-gray-600">
+                            {car.description}
+                          </p>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             </div>
           </div>
         </div>
       );
     }
-    // Customer view will redirect to /cars
-    return null;
+    // Provider view remains unchanged
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white relative">
+        <LogoutButton />
+        <div className="container mx-auto px-4 py-16">
+          <div className="text-center">
+            <h1 className="text-4xl font-bold text-gray-900 mb-6">
+              Welcome to Wildfloc, {userProfile.full_name}
+            </h1>
+            <p className="text-xl text-gray-600 mb-8">
+              Manage your car listings and bookings
+            </p>
+            <Button 
+              className="w-full max-w-md mx-auto"
+              onClick={() => navigate("/provider/dashboard")}
+            >
+              Go to Provider Dashboard
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
-  // Not logged in view
+  // Not logged in view remains unchanged
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
       <div className="container mx-auto px-4 py-16">
