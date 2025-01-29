@@ -6,6 +6,7 @@ import { Car } from "lucide-react";
 import { useState } from "react";
 import { format, isWithinInterval, differenceInDays } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 import {
   Dialog,
   DialogContent,
@@ -17,6 +18,7 @@ import {
 import { DateTimeRangePicker } from "@/components/DateTimeRangePicker";
 
 const Cars = () => {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [selectedDates, setSelectedDates] = useState<{
     from: Date | undefined;
@@ -208,13 +210,25 @@ const Cars = () => {
 
   return (
     <div className="container py-8">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-        <h1 className="text-3xl font-bold">Available Cars</h1>
+      {/* Header Section with My Bookings Button */}
+      <div className="flex flex-col items-center justify-between gap-8 mb-12">
+        <div className="w-full flex justify-between items-center">
+          <h1 className="text-3xl font-bold">Available Cars</h1>
+          <Button 
+            variant="outline"
+            onClick={() => navigate("/customer/bookings")}
+          >
+            My Bookings
+          </Button>
+        </div>
         
-        <DateTimeRangePicker
-          dateRange={selectedDates}
-          onDateRangeChange={setSelectedDates}
-        />
+        {/* Centered and Broadened Date Picker */}
+        <div className="w-full max-w-2xl mx-auto">
+          <DateTimeRangePicker
+            dateRange={selectedDates}
+            onDateRangeChange={setSelectedDates}
+          />
+        </div>
       </div>
 
       {/* Available Cars Section */}
