@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Car, ArrowLeft } from "lucide-react";
+import { Car, ArrowLeft, Star, Fuel, Users, DoorOpen } from "lucide-react";
 import { DateTimeRangePicker } from "@/components/DateTimeRangePicker";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -141,7 +141,7 @@ const CarDetails = () => {
   }
 
   return (
-    <div className="container py-8">
+    <div className="container max-w-7xl mx-auto py-8 px-4">
       <Button 
         variant="ghost" 
         className="mb-6"
@@ -151,53 +151,93 @@ const CarDetails = () => {
         Back
       </Button>
 
-      <div className="grid md:grid-cols-2 gap-8">
-        <div>
-          {car.image_url ? (
-            <img
-              src={car.image_url}
-              alt={car.model}
-              className="w-full h-64 object-cover rounded-lg shadow-lg hover:scale-105 transition-transform duration-300"
-            />
-          ) : (
-            <div className="w-full h-64 bg-gray-100 rounded-lg flex items-center justify-center shadow-inner">
-              <Car className="h-24 w-24 text-gray-400" />
+      <div className="grid lg:grid-cols-2 gap-8">
+        <div className="space-y-6">
+          <div className="relative h-[400px] rounded-xl overflow-hidden">
+            {car.image_url ? (
+              <img
+                src={car.image_url}
+                alt={car.model}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                <Car className="h-32 w-32 text-gray-400" />
+              </div>
+            )}
+          </div>
+          
+          <div className="space-y-4">
+            <div className="flex justify-between items-start">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">{car.model} ({car.year})</h1>
+                <div className="flex items-center mt-2">
+                  <Star className="h-5 w-5 text-yellow-400 fill-current" />
+                  <span className="ml-1 text-gray-700">5.0 (10 trips)</span>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-3xl font-bold text-gray-900">${car.rate_per_day}</p>
+                <p className="text-sm text-gray-500">per day</p>
+              </div>
             </div>
-          )}
-        </div>
 
-        <Card className="backdrop-blur-sm bg-white/50">
-          <CardHeader>
-            <CardTitle className="flex justify-between items-start">
-              <span className="text-2xl font-bold text-gray-800">{car.model} ({car.year})</span>
-              <span className="text-xl font-semibold text-green-600">${car.rate_per_day}/day</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-3">
-              <p className="text-gray-700"><strong>Provider:</strong> {car.profiles.full_name}</p>
-              <p className="text-gray-700"><strong>License Plate:</strong> {car.license_plate}</p>
-              <p className="text-gray-700"><strong>Seats:</strong> {car.seats}</p>
-              {car.description && (
-                <p className="text-gray-700"><strong>Description:</strong> {car.description}</p>
-              )}
+            <div className="grid grid-cols-3 gap-4">
+              <div className="flex items-center space-x-2">
+                <Fuel className="h-5 w-5 text-gray-500" />
+                <span className="text-gray-700">22 MPG</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <DoorOpen className="h-5 w-5 text-gray-500" />
+                <span className="text-gray-700">4 doors</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Users className="h-5 w-5 text-gray-500" />
+                <span className="text-gray-700">{car.seats} seats</span>
+              </div>
             </div>
 
             <div className="border-t pt-4">
-              <h3 className="text-xl font-semibold mb-4 text-gray-800">Book this car</h3>
+              <h2 className="text-xl font-semibold mb-2">Description</h2>
+              <p className="text-gray-700 whitespace-pre-line">
+                {car.description || "No description available"}
+              </p>
+            </div>
+
+            <div className="border-t pt-4">
+              <h2 className="text-xl font-semibold mb-2">Host</h2>
+              <div className="flex items-center space-x-4">
+                <div className="h-12 w-12 rounded-full bg-gray-200 flex items-center justify-center">
+                  {car.profiles.full_name?.[0] || "P"}
+                </div>
+                <div>
+                  <p className="font-medium">{car.profiles.full_name}</p>
+                  <p className="text-sm text-gray-500">Joined Nov 2024</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="lg:sticky lg:top-8">
+          <Card className="backdrop-blur-sm bg-white/50">
+            <CardHeader>
+              <CardTitle>Book this car</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <DateTimeRangePicker
                 dateRange={selectedDates}
                 onDateRangeChange={setSelectedDates}
               />
               <Button 
-                className="w-full mt-4 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-300"
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-300"
                 onClick={handleBooking}
               >
-                Book Now
+                Continue to Book
               </Button>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );
