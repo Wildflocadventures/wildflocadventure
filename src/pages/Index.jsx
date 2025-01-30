@@ -5,14 +5,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { DateTimeRangePicker } from "@/components/DateTimeRangePicker";
-import { format, isWithinInterval, differenceInDays } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { useQuery } from "@tanstack/react-query";
 
 const Index = () => {
   const navigate = useNavigate();
   const [session, setSession] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
-  const [cars, setCars] = useState([]);
   const { toast } = useToast();
   const [selectedDates, setSelectedDates] = useState({
     from: undefined,
@@ -20,7 +19,6 @@ const Index = () => {
   });
 
   useEffect(() => {
-    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       if (session?.user?.id) {
@@ -28,7 +26,6 @@ const Index = () => {
       }
     });
 
-    // Listen for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -43,12 +40,6 @@ const Index = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  useEffect(() => {
-    if (userProfile?.role === 'customer') {
-      fetchCars();
-    }
-  }, [userProfile]);
-
   const fetchUserProfile = async (userId) => {
     const { data, error } = await supabase
       .from("profiles")
@@ -61,31 +52,27 @@ const Index = () => {
     }
   };
 
-  const fetchCars = async () => {
-    const { data, error } = await supabase
-      .from("cars")
-      .select(`
-        *,
-        profiles (
-          full_name
-        ),
-        car_availability (
-          start_date,
-          end_date,
-          is_available
-        )
-      `);
+  const { data: cars, isLoading: carsLoading } = useQuery({
+    queryKey: ["cars", selectedDates],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("cars")
+        .select(`
+          *,
+          profiles (
+            full_name
+          ),
+          car_availability (
+            start_date,
+            end_date,
+            is_available
+          )
+        `);
 
-    if (error) {
-      toast({
-        title: "Error fetching cars",
-        description: error.message,
-        variant: "destructive",
-      });
-    } else if (data) {
-      setCars(data);
-    }
-  };
+      if (error) throw error;
+      return data;
+    },
+  });
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -103,6 +90,25 @@ const Index = () => {
     </Button>
   );
 
+  const isCarAvailable = (car) => {
+    if (!selectedDates.from || !selectedDates.to || !car?.car_availability) return true;
+    
+    const hasUnavailabilityConflict = car.car_availability.some((availability) => {
+      if (availability.is_available) return false;
+      
+      const availStart = new Date(availability.start_date);
+      const availEnd = new Date(availability.end_date);
+      
+      return (
+        (selectedDates.from <= availEnd && selectedDates.to >= availStart) ||
+        (selectedDates.from >= availStart && selectedDates.from <= availEnd) ||
+        (selectedDates.to >= availStart && selectedDates.to <= availEnd)
+      );
+    });
+
+    return !hasUnavailabilityConflict;
+  };
+
   if (session && userProfile) {
     if (userProfile.role === "customer") {
       return (
@@ -114,10 +120,9 @@ const Index = () => {
                 Welcome, {userProfile.full_name}
               </h1>
               <h2 className="text-2xl text-gray-600 mb-8">
-                Wildfloc Car Rental Service
+                Find Your Perfect Ride
               </h2>
               
-              {/* Date Range Picker */}
               <div className="w-full max-w-2xl mx-auto mb-12">
                 <DateTimeRangePicker
                   dateRange={selectedDates}
@@ -125,55 +130,69 @@ const Index = () => {
                 />
               </div>
 
-              {/* Cars Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {cars.map((car) => (
-                  <Card key={car.id} className="hover:shadow-lg transition-shadow">
-                    <CardHeader>
-                      {car.image_url && (
-                        <div className="w-full h-48 rounded-t-lg overflow-hidden">
-                          <img
-                            src={car.image_url}
-                            alt={`${car.model}`}
-                            className="w-full h-full object-cover"
-                          />
+              {carsLoading ? (
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {[1, 2, 3].map((i) => (
+                    <Card key={i} className="animate-pulse">
+                      <CardHeader className="h-48 bg-gray-200" />
+                      <CardContent className="space-y-2">
+                        <div className="h-4 bg-gray-200 rounded w-3/4" />
+                        <div className="h-4 bg-gray-200 rounded w-1/2" />
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {cars?.filter(isCarAvailable).map((car) => (
+                    <Card 
+                      key={car.id} 
+                      className="cursor-pointer hover:shadow-lg transition-shadow"
+                      onClick={() => navigate(`/car/${car.id}`)}
+                    >
+                      <CardHeader className="p-0">
+                        <div className="h-48 bg-gray-200 flex items-center justify-center">
+                          {car.image_url ? (
+                            <img
+                              src={car.image_url}
+                              alt={car.model}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <Car className="h-24 w-24 text-gray-400" />
+                          )}
                         </div>
-                      )}
-                      <CardTitle>{car.model} ({car.year})</CardTitle>
-                      <CardDescription>
-                        Provider: {car.profiles.full_name}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        <p>Seats: {car.seats}</p>
-                        <p>License Plate: {car.license_plate}</p>
-                        <p className="font-semibold">
-                          ${car.rate_per_day} per day
-                        </p>
-                        {car.description && (
-                          <p className="text-sm text-gray-600">
-                            {car.description}
+                      </CardHeader>
+                      <CardContent className="p-6">
+                        <CardTitle className="flex justify-between items-start mb-2">
+                          <span>{car.model} ({car.year})</span>
+                          <span className="text-green-600">${car.rate_per_day}/day</span>
+                        </CardTitle>
+                        <div className="space-y-2 text-sm text-muted-foreground">
+                          <p>Provider: {car.profiles.full_name}</p>
+                          <p>Seats: {car.seats}</p>
+                          <p className="text-green-600">
+                            Available for selected dates
                           </p>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
       );
     }
-    // Provider view remains unchanged
+    // Provider view
     return (
       <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white relative">
         <LogoutButton />
         <div className="container mx-auto px-4 py-16">
           <div className="text-center">
             <h1 className="text-4xl font-bold text-gray-900 mb-6">
-              Welcome to Wildfloc, {userProfile.full_name}
+              Welcome to Your Dashboard, {userProfile.full_name}
             </h1>
             <p className="text-xl text-gray-600 mb-8">
               Manage your car listings and bookings
@@ -190,13 +209,13 @@ const Index = () => {
     );
   }
 
-  // Not logged in view remains unchanged
+  // Not logged in view
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
       <div className="container mx-auto px-4 py-16">
         <div className="text-center">
           <h1 className="text-4xl font-bold text-gray-900 mb-6">
-            Wildfloc - Your Trusted Car Rental Platform
+            Your Trusted Car Rental Platform
           </h1>
           <p className="text-xl text-gray-600 mb-8">
             Find the perfect car for your journey, or rent out your vehicle to earn extra income
