@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Car, Star, ArrowLeft } from "lucide-react";
+import { Car, ArrowLeft } from "lucide-react";
 import { DateTimeRangePicker } from "@/components/DateTimeRangePicker";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -17,9 +17,11 @@ const CarDetails = () => {
     to: undefined,
   });
 
-  const { data: car, isLoading } = useQuery({
+  const { data: car, isLoading, error } = useQuery({
     queryKey: ["car", id],
     queryFn: async () => {
+      if (!id) throw new Error("No car ID provided");
+      
       const { data, error } = await supabase
         .from("cars")
         .select(`
@@ -34,11 +36,13 @@ const CarDetails = () => {
           )
         `)
         .eq("id", id)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
+      if (!data) throw new Error("Car not found");
       return data;
     },
+    enabled: !!id,
   });
 
   const handleBooking = async () => {
@@ -66,7 +70,7 @@ const CarDetails = () => {
     const totalAmount = days * car.rate_per_day;
 
     try {
-      const { error } = await supabase
+      const { error: bookingError } = await supabase
         .from("bookings")
         .insert({
           car_id: id,
@@ -77,7 +81,7 @@ const CarDetails = () => {
           status: 'pending'
         });
 
-      if (error) throw error;
+      if (bookingError) throw bookingError;
 
       toast({
         title: "Success",
@@ -92,6 +96,21 @@ const CarDetails = () => {
     }
   };
 
+  if (error) {
+    return (
+      <div className="container py-8">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-red-600 mb-4">Error Loading Car Details</h2>
+          <p className="text-gray-600 mb-4">{error.message}</p>
+          <Button onClick={() => navigate(-1)}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Go Back
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="container py-8">
@@ -99,6 +118,21 @@ const CarDetails = () => {
           <div className="h-64 bg-gray-200 rounded-lg" />
           <div className="h-8 bg-gray-200 rounded w-1/2" />
           <div className="h-4 bg-gray-200 rounded w-1/4" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!car) {
+    return (
+      <div className="container py-8">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">Car Not Found</h2>
+          <p className="text-gray-600 mb-4">The car you're looking for doesn't exist or has been removed.</p>
+          <Button onClick={() => navigate(-1)}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Go Back
+          </Button>
         </div>
       </div>
     );
@@ -121,40 +155,40 @@ const CarDetails = () => {
             <img
               src={car.image_url}
               alt={car.model}
-              className="w-full h-64 object-cover rounded-lg"
+              className="w-full h-64 object-cover rounded-lg shadow-lg hover:scale-105 transition-transform duration-300"
             />
           ) : (
-            <div className="w-full h-64 bg-gray-100 rounded-lg flex items-center justify-center">
+            <div className="w-full h-64 bg-gray-100 rounded-lg flex items-center justify-center shadow-inner">
               <Car className="h-24 w-24 text-gray-400" />
             </div>
           )}
         </div>
 
-        <Card>
+        <Card className="backdrop-blur-sm bg-white/50">
           <CardHeader>
             <CardTitle className="flex justify-between items-start">
-              <span>{car.model} ({car.year})</span>
-              <span className="text-green-600">${car.rate_per_day}/day</span>
+              <span className="text-2xl font-bold text-gray-800">{car.model} ({car.year})</span>
+              <span className="text-xl font-semibold text-green-600">${car.rate_per_day}/day</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <p><strong>Provider:</strong> {car.profiles.full_name}</p>
-              <p><strong>License Plate:</strong> {car.license_plate}</p>
-              <p><strong>Seats:</strong> {car.seats}</p>
+            <div className="space-y-3">
+              <p className="text-gray-700"><strong>Provider:</strong> {car.profiles.full_name}</p>
+              <p className="text-gray-700"><strong>License Plate:</strong> {car.license_plate}</p>
+              <p className="text-gray-700"><strong>Seats:</strong> {car.seats}</p>
               {car.description && (
-                <p><strong>Description:</strong> {car.description}</p>
+                <p className="text-gray-700"><strong>Description:</strong> {car.description}</p>
               )}
             </div>
 
             <div className="border-t pt-4">
-              <h3 className="font-semibold mb-2">Book this car</h3>
+              <h3 className="text-xl font-semibold mb-4 text-gray-800">Book this car</h3>
               <DateTimeRangePicker
                 dateRange={selectedDates}
                 onDateRangeChange={setSelectedDates}
               />
               <Button 
-                className="w-full mt-4"
+                className="w-full mt-4 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-300"
                 onClick={handleBooking}
               >
                 Book Now
