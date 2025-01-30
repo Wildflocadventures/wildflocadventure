@@ -1,12 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { Car, LogIn } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Car, LogIn, LogOut, Calendar, Search, Star } from "lucide-react";
+import { Card } from "@/components/ui/card";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { DateTimeRangePicker } from "@/components/DateTimeRangePicker";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
+import { Input } from "@/components/ui/input";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -17,6 +18,7 @@ const Index = () => {
     from: undefined,
     to: undefined,
   });
+  const [location, setLocation] = useState("");
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -66,6 +68,9 @@ const Index = () => {
             start_date,
             end_date,
             is_available
+          ),
+          bookings (
+            id
           )
         `);
 
@@ -74,9 +79,14 @@ const Index = () => {
     },
   });
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate('/');
+  };
+
   const AuthButtons = () => (
     <div className="absolute top-4 right-4 flex gap-4">
-      {!session && (
+      {!session ? (
         <>
           <Button 
             variant="outline"
@@ -95,6 +105,25 @@ const Index = () => {
             Service Provider
           </Button>
         </>
+      ) : (
+        <div className="flex gap-4">
+          <Button
+            variant="outline"
+            className="bg-white/90 backdrop-blur-sm hover:bg-white/70 transition-all"
+            onClick={() => navigate("/customer/bookings")}
+          >
+            <Calendar className="w-4 h-4 mr-2" />
+            My Bookings
+          </Button>
+          <Button
+            variant="outline"
+            className="bg-white/90 backdrop-blur-sm hover:bg-white/70 transition-all"
+            onClick={handleLogout}
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            Logout
+          </Button>
+        </div>
       )}
     </div>
   );
@@ -122,36 +151,50 @@ const Index = () => {
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white relative">
       <AuthButtons />
       
-      {/* Hero Section */}
       <div className="relative py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
         <div className="absolute inset-0 bg-black/20 backdrop-blur-sm"></div>
-        <div className="relative max-w-7xl mx-auto text-center">
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold mb-4">
+        <div className="relative max-w-7xl mx-auto">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold mb-8 text-center">
             Wildfloc Adventures
           </h1>
-          <p className="text-xl sm:text-2xl text-blue-100 max-w-3xl mx-auto">
-            Discover your next adventure with our premium car rental service
-          </p>
+          
+          <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-xl p-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Where</label>
+                <div className="relative">
+                  <Input
+                    type="text"
+                    placeholder="City, airport, address or hotel"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    className="pl-10"
+                  />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                </div>
+              </div>
+              
+              <div className="md:col-span-2">
+                <DateTimeRangePicker
+                  dateRange={selectedDates}
+                  onDateRangeChange={setSelectedDates}
+                />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
       <div className="container mx-auto px-4 py-16">
-        <div className="max-w-2xl mx-auto mb-12">
-          <DateTimeRangePicker
-            dateRange={selectedDates}
-            onDateRangeChange={setSelectedDates}
-          />
-        </div>
-
         {carsLoading ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {[1, 2, 3].map((i) => (
               <Card key={i} className="animate-pulse">
-                <CardHeader className="h-48 bg-gray-200" />
-                <CardContent className="space-y-2">
+                <div className="h-48 bg-gray-200 rounded-t-lg" />
+                <div className="p-4 space-y-2">
                   <div className="h-4 bg-gray-200 rounded w-3/4" />
                   <div className="h-4 bg-gray-200 rounded w-1/2" />
-                </CardContent>
+                </div>
               </Card>
             ))}
           </div>
@@ -160,11 +203,16 @@ const Index = () => {
             {cars?.filter(isCarAvailable).map((car) => (
               <Card 
                 key={car.id} 
-                className="group cursor-pointer hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 overflow-hidden bg-white/80 backdrop-blur-sm"
+                className="group cursor-pointer hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 overflow-hidden"
                 onClick={() => navigate(`/car/${car.id}`)}
               >
-                <CardHeader className="p-0">
-                  <div className="h-48 bg-gray-100 relative overflow-hidden group-hover:shadow-inner transition-all">
+                <div className="relative">
+                  <div className="absolute top-4 right-4 z-10">
+                    <button className="p-2 rounded-full bg-white/80 hover:bg-white transition-colors">
+                      <Star className="h-5 w-5 text-yellow-500" />
+                    </button>
+                  </div>
+                  <div className="h-48 relative overflow-hidden">
                     {car.image_url ? (
                       <img
                         src={car.image_url}
@@ -177,26 +225,31 @@ const Index = () => {
                       </div>
                     )}
                   </div>
-                </CardHeader>
-                <CardContent className="p-6">
-                  <CardTitle className="flex justify-between items-start mb-3">
-                    <span className="text-xl font-bold text-gray-900">{car.model} ({car.year})</span>
-                    <span className="text-lg font-semibold text-green-600">${car.rate_per_day}/day</span>
-                  </CardTitle>
-                  <div className="space-y-2 text-sm text-gray-600">
+                </div>
+                
+                <div className="p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="text-lg font-semibold">{car.model} ({car.year})</h3>
+                    <span className="text-lg font-bold text-green-600">${car.rate_per_day}/day</span>
+                  </div>
+                  
+                  <div className="flex items-center gap-1 text-yellow-500 mb-2">
+                    <Star className="h-4 w-4 fill-current" />
+                    <span className="text-sm font-medium">5.0</span>
+                    <span className="text-sm text-gray-500">
+                      ({car.bookings?.length || 0} trips)
+                    </span>
+                  </div>
+                  
+                  <div className="text-sm text-gray-600">
                     <p className="flex items-center gap-2">
-                      <span className="font-medium">Provider:</span> 
-                      {car.profiles.full_name}
+                      Host: {car.profiles.full_name}
                     </p>
                     <p className="flex items-center gap-2">
-                      <span className="font-medium">Seats:</span> 
-                      {car.seats}
-                    </p>
-                    <p className="text-green-600 font-medium mt-3">
-                      Available for selected dates
+                      Seats: {car.seats}
                     </p>
                   </div>
-                </CardContent>
+                </div>
               </Card>
             ))}
           </div>

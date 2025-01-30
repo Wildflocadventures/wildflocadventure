@@ -8,8 +8,8 @@ import CarDetails from "@/pages/CarDetails";
 import Auth from "@/pages/Auth";
 import ProviderAuth from "@/pages/ProviderAuth";
 import ProviderDashboard from "@/pages/ProviderDashboard";
+import CustomerBookings from "@/pages/CustomerBookings";
 
-// Create a client
 const queryClient = new QueryClient();
 
 function App() {
@@ -23,6 +23,7 @@ function App() {
             <Route path="/auth" element={<Auth />} />
             <Route path="/provider/auth" element={<ProviderAuth />} />
             <Route path="/provider/dashboard" element={<ProviderDashboard />} />
+            <Route path="/customer/bookings" element={<CustomerBookings />} />
           </Routes>
           <Toaster />
           <SonnerToaster />
