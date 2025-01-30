@@ -7,6 +7,7 @@ import { Car, ArrowLeft } from "lucide-react";
 import { DateTimeRangePicker } from "@/components/DateTimeRangePicker";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const CarDetails = () => {
   const { id } = useParams();
@@ -35,14 +36,15 @@ const CarDetails = () => {
             is_available
           )
         `)
-        .eq("id", id)
+        .eq('id', id)
         .maybeSingle();
 
       if (error) throw error;
       if (!data) throw new Error("Car not found");
       return data;
     },
-    enabled: !!id,
+    enabled: Boolean(id),
+    retry: false
   });
 
   const handleBooking = async () => {
@@ -114,10 +116,10 @@ const CarDetails = () => {
   if (isLoading) {
     return (
       <div className="container py-8">
-        <div className="animate-pulse space-y-4">
-          <div className="h-64 bg-gray-200 rounded-lg" />
-          <div className="h-8 bg-gray-200 rounded w-1/2" />
-          <div className="h-4 bg-gray-200 rounded w-1/4" />
+        <div className="space-y-4">
+          <Skeleton className="h-64 w-full" />
+          <Skeleton className="h-8 w-1/2" />
+          <Skeleton className="h-4 w-1/4" />
         </div>
       </div>
     );
