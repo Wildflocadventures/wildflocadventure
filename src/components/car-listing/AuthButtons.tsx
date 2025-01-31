@@ -12,13 +12,29 @@ interface AuthButtonsProps {
 export const AuthButtons = ({ session, userProfile, onLogout }: AuthButtonsProps) => {
   const navigate = useNavigate();
 
+  const handleCustomerLogin = () => {
+    navigate("/auth");
+  };
+
+  const handleProviderLogin = () => {
+    navigate("/provider/auth");
+  };
+
+  const handleMyBookings = () => {
+    navigate("/customer/bookings");
+  };
+
+  const handleDashboard = () => {
+    navigate("/provider/dashboard");
+  };
+
   if (!session) {
     return (
       <div className="absolute top-4 right-4 flex gap-4">
         <Button 
           variant="outline"
           className="bg-white/90 backdrop-blur-sm hover:bg-white/70 transition-all"
-          onClick={() => navigate("/auth")}
+          onClick={handleCustomerLogin}
         >
           <User className="w-4 h-4 mr-2" />
           Customer Login
@@ -26,7 +42,7 @@ export const AuthButtons = ({ session, userProfile, onLogout }: AuthButtonsProps
         <Button 
           variant="outline"
           className="bg-white/90 backdrop-blur-sm hover:bg-white/70 transition-all"
-          onClick={() => navigate("/provider/auth")}
+          onClick={handleProviderLogin}
         >
           <Users className="w-4 h-4 mr-2" />
           Service Provider
@@ -41,7 +57,7 @@ export const AuthButtons = ({ session, userProfile, onLogout }: AuthButtonsProps
         <Button
           variant="outline"
           className="bg-white/90 backdrop-blur-sm hover:bg-white/70 transition-all"
-          onClick={() => navigate("/customer/bookings")}
+          onClick={handleMyBookings}
         >
           <Calendar className="w-4 h-4 mr-2" />
           My Bookings
@@ -51,7 +67,7 @@ export const AuthButtons = ({ session, userProfile, onLogout }: AuthButtonsProps
         <Button
           variant="outline"
           className="bg-white/90 backdrop-blur-sm hover:bg-white/70 transition-all"
-          onClick={() => navigate("/provider/dashboard")}
+          onClick={handleDashboard}
         >
           <Calendar className="w-4 h-4 mr-2" />
           Dashboard

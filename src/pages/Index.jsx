@@ -20,7 +20,6 @@ const Index = () => {
   const [location, setLocation] = useState("");
 
   useEffect(() => {
-    // Fetch initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       if (session?.user?.id) {
@@ -28,11 +27,9 @@ const Index = () => {
       }
     });
 
-    // Set up auth state listener
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      console.log("Auth state changed:", session);
       setSession(session);
       if (session?.user?.id) {
         fetchUserProfile(session.user.id);
@@ -45,17 +42,24 @@ const Index = () => {
   }, []);
 
   const fetchUserProfile = async (userId) => {
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", userId)
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .single();
 
-    if (!error && data) {
-      console.log("User profile:", data);
-      setUserProfile(data);
-    } else {
-      console.error("Error fetching user profile:", error);
+      if (error) {
+        console.error("Error fetching user profile:", error);
+        return;
+      }
+
+      if (data) {
+        console.log("User profile:", data);
+        setUserProfile(data);
+      }
+    } catch (error) {
+      console.error("Error in fetchUserProfile:", error);
     }
   };
 
@@ -99,6 +103,8 @@ const Index = () => {
           title: "Success",
           description: "Logged out successfully",
         });
+        setSession(null);
+        setUserProfile(null);
         navigate('/');
       }
     } catch (error) {
