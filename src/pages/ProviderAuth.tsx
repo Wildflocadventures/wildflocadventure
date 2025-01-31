@@ -17,79 +17,184 @@ const ProviderAuth = () => {
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
 
-  const handleProviderSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: fullName,
-        },
-      },
-    });
-
-    if (authError) {
+  const validateForm = () => {
+    if (!email || !password) {
       toast({
         title: "Error",
-        description: authError.message,
+        description: "Please fill in all required fields",
         variant: "destructive",
       });
-      setIsLoading(false);
+      return false;
+    }
+    if (password.length < 6) {
+      toast({
+        title: "Error",
+        description: "Password must be at least 6 characters long",
+        variant: "destructive",
+      });
+      return false;
+    }
+    if (!email.includes('@')) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid email address",
+        variant: "destructive",
+      });
+      return false;
+    }
+    return true;
+  };
+
+  const handleProviderSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateForm() || !fullName || !phone) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
       return;
     }
 
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .update({ 
-        role: 'provider',
-        phone: phone 
-      })
-      .eq('id', authData.user?.id);
+    setIsLoading(true);
 
-    if (profileError) {
+    try {
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+          },
+        },
+      });
+
+      if (authError) {
+        console.error("Signup error:", authError);
+        toast({
+          title: "Error",
+          description: authError.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!authData.user) {
+        toast({
+          title: "Error",
+          description: "Failed to create account",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ 
+          role: 'provider',
+          phone: phone 
+        })
+        .eq('id', authData.user.id);
+
+      if (profileError) {
+        console.error("Profile update error:", profileError);
+        toast({
+          title: "Error",
+          description: profileError.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: "Please check your email to confirm your account",
+        });
+        navigate("/provider/dashboard");
+      }
+    } catch (error: any) {
+      console.error("Unexpected error:", error);
       toast({
         title: "Error",
-        description: profileError.message,
+        description: "An unexpected error occurred",
         variant: "destructive",
       });
-    } else {
-      toast({
-        title: "Success",
-        description: "Please check your email to confirm your account",
-      });
-      navigate("/provider/dashboard");
+    } finally {
+      setIsLoading(false);
     }
-
-    setIsLoading(false);
   };
 
   const handleProviderSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateForm()) return;
+
     setIsLoading(true);
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
-    } else {
+
+      if (error) {
+        console.error("Login error:", error);
+        toast({
+          title: "Error",
+          description: "Invalid email or password",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!data.user) {
+        toast({
+          title: "Error",
+          description: "Failed to sign in",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Check if the user is a provider
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', data.user.id)
+        .single();
+
+      if (profileError) {
+        console.error("Profile fetch error:", profileError);
+        toast({
+          title: "Error",
+          description: "Failed to verify provider status",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (profileData.role !== 'provider') {
+        toast({
+          title: "Error",
+          description: "This account is not registered as a provider",
+          variant: "destructive",
+        });
+        await supabase.auth.signOut();
+        return;
+      }
+
       toast({
         title: "Success",
         description: "Successfully signed in",
       });
       navigate("/provider/dashboard");
+    } catch (error: any) {
+      console.error("Unexpected error:", error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
-
-    setIsLoading(false);
   };
 
   return (
