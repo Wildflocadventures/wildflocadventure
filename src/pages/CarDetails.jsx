@@ -92,6 +92,12 @@ const CarDetails = () => {
         title: "Success",
         description: "Car booked successfully! Please proceed with the payment.",
       });
+
+      // Add a small delay before redirecting to make sure the user sees the success message
+      setTimeout(() => {
+        navigate("/customer/bookings");
+      }, 2000);
+      
     } catch (error) {
       toast({
         title: "Error",
