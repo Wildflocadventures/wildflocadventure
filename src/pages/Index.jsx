@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { Car, LogIn, LogOut, Calendar, Search, Star, Heart } from "lucide-react";
+import { Car, LogIn, LogOut, Calendar, Search, Star, Heart, User, Users } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,6 +22,7 @@ const Index = () => {
   const [location, setLocation] = useState("");
 
   useEffect(() => {
+    // Fetch initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       if (session?.user?.id) {
@@ -29,6 +30,7 @@ const Index = () => {
       }
     });
 
+    // Set up auth state listener
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -106,28 +108,40 @@ const Index = () => {
             className="bg-white/90 backdrop-blur-sm hover:bg-white/70 transition-all"
             onClick={() => navigate("/auth")}
           >
-            <LogIn className="w-4 h-4 mr-2" />
-            Customer
+            <User className="w-4 h-4 mr-2" />
+            Customer Login
           </Button>
           <Button 
             variant="outline"
             className="bg-white/90 backdrop-blur-sm hover:bg-white/70 transition-all"
             onClick={() => navigate("/provider/auth")}
           >
-            <LogIn className="w-4 h-4 mr-2" />
+            <Users className="w-4 h-4 mr-2" />
             Service Provider
           </Button>
         </>
       ) : (
         <div className="flex gap-4">
-          <Button
-            variant="outline"
-            className="bg-white/90 backdrop-blur-sm hover:bg-white/70 transition-all"
-            onClick={() => navigate("/customer/bookings")}
-          >
-            <Calendar className="w-4 h-4 mr-2" />
-            My Bookings
-          </Button>
+          {userProfile?.role === 'customer' && (
+            <Button
+              variant="outline"
+              className="bg-white/90 backdrop-blur-sm hover:bg-white/70 transition-all"
+              onClick={() => navigate("/customer/bookings")}
+            >
+              <Calendar className="w-4 h-4 mr-2" />
+              My Bookings
+            </Button>
+          )}
+          {userProfile?.role === 'provider' && (
+            <Button
+              variant="outline"
+              className="bg-white/90 backdrop-blur-sm hover:bg-white/70 transition-all"
+              onClick={() => navigate("/provider/dashboard")}
+            >
+              <Calendar className="w-4 h-4 mr-2" />
+              Dashboard
+            </Button>
+          )}
           <Button
             variant="outline"
             className="bg-white/90 backdrop-blur-sm hover:bg-white/70 transition-all"
