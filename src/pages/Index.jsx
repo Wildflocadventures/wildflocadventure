@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { Car, LogIn, LogOut, Calendar, Search, Star } from "lucide-react";
+import { Car, LogIn, LogOut, Calendar, Search, Star, Heart } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,6 +8,7 @@ import { DateTimeRangePicker } from "@/components/DateTimeRangePicker";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
+import { format } from "date-fns";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -80,8 +81,20 @@ const Index = () => {
   });
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate('/');
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to log out",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "Logged out successfully",
+      });
+      navigate('/');
+    }
   };
 
   const AuthButtons = () => (
@@ -147,6 +160,13 @@ const Index = () => {
     return !hasUnavailabilityConflict;
   };
 
+  const formatDateRange = () => {
+    if (selectedDates.from && selectedDates.to) {
+      return `${format(selectedDates.from, 'MMM d')} - ${format(selectedDates.to, 'MMM d')}`;
+    }
+    return null;
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white relative">
       <AuthButtons />
@@ -158,8 +178,8 @@ const Index = () => {
             Wildfloc Adventures
           </h1>
           
-          <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-xl p-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-xl p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700">Where</label>
                 <div className="relative">
@@ -174,7 +194,8 @@ const Index = () => {
                 </div>
               </div>
               
-              <div className="md:col-span-2">
+              <div>
+                <label className="text-sm font-medium text-gray-700">When</label>
                 <DateTimeRangePicker
                   dateRange={selectedDates}
                   onDateRangeChange={setSelectedDates}
@@ -186,6 +207,13 @@ const Index = () => {
       </div>
 
       <div className="container mx-auto px-4 py-16">
+        <div className="flex justify-between items-center mb-8">
+          <h2 className="text-2xl font-bold">Available Cars</h2>
+          {formatDateRange() && (
+            <span className="text-gray-600">{formatDateRange()}</span>
+          )}
+        </div>
+        
         {carsLoading ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {[1, 2, 3].map((i) => (
@@ -203,16 +231,16 @@ const Index = () => {
             {cars?.filter(isCarAvailable).map((car) => (
               <Card 
                 key={car.id} 
-                className="group cursor-pointer hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 overflow-hidden"
+                className="group cursor-pointer hover:shadow-xl transition-all duration-300"
                 onClick={() => navigate(`/car/${car.id}`)}
               >
                 <div className="relative">
                   <div className="absolute top-4 right-4 z-10">
                     <button className="p-2 rounded-full bg-white/80 hover:bg-white transition-colors">
-                      <Star className="h-5 w-5 text-yellow-500" />
+                      <Heart className="h-5 w-5 text-gray-600 hover:text-red-500" />
                     </button>
                   </div>
-                  <div className="h-48 relative overflow-hidden">
+                  <div className="h-48 relative overflow-hidden rounded-t-lg">
                     {car.image_url ? (
                       <img
                         src={car.image_url}
@@ -229,16 +257,20 @@ const Index = () => {
                 
                 <div className="p-4">
                   <div className="flex justify-between items-start mb-2">
-                    <h3 className="text-lg font-semibold">{car.model} ({car.year})</h3>
-                    <span className="text-lg font-bold text-green-600">${car.rate_per_day}/day</span>
-                  </div>
-                  
-                  <div className="flex items-center gap-1 text-yellow-500 mb-2">
-                    <Star className="h-4 w-4 fill-current" />
-                    <span className="text-sm font-medium">5.0</span>
-                    <span className="text-sm text-gray-500">
-                      ({car.bookings?.length || 0} trips)
-                    </span>
+                    <div>
+                      <h3 className="text-lg font-semibold">{car.model} ({car.year})</h3>
+                      <div className="flex items-center gap-1 text-yellow-500">
+                        <Star className="h-4 w-4 fill-current" />
+                        <span className="text-sm font-medium">5.0</span>
+                        <span className="text-sm text-gray-500">
+                          ({car.bookings?.length || 0} trips)
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-lg font-bold text-green-600">${car.rate_per_day}</span>
+                      <p className="text-sm text-gray-500">per day</p>
+                    </div>
                   </div>
                   
                   <div className="text-sm text-gray-600">
