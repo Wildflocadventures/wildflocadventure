@@ -36,10 +36,13 @@ const CarDetails = () => {
             is_available
           )
         `)
-        .eq('id', id)
+        .eq("id", id)
         .maybeSingle();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase error:", error);
+        throw error;
+      }
       if (!data) throw new Error("Car not found");
       return data;
     },
@@ -89,6 +92,12 @@ const CarDetails = () => {
         title: "Success",
         description: "Car booked successfully! Please proceed with the payment.",
       });
+
+      // Add a small delay before redirecting to make sure the user sees the success message
+      setTimeout(() => {
+        navigate("/customer/bookings");
+      }, 2000);
+      
     } catch (error) {
       toast({
         title: "Error",
@@ -99,6 +108,7 @@ const CarDetails = () => {
   };
 
   if (error) {
+    console.error("Query error:", error);
     return (
       <div className="container py-8">
         <div className="text-center">
@@ -208,10 +218,10 @@ const CarDetails = () => {
               <h2 className="text-xl font-semibold mb-2">Host</h2>
               <div className="flex items-center space-x-4">
                 <div className="h-12 w-12 rounded-full bg-gray-200 flex items-center justify-center">
-                  {car.profiles.full_name?.[0] || "P"}
+                  {car.profiles?.full_name?.[0] || "P"}
                 </div>
                 <div>
-                  <p className="font-medium">{car.profiles.full_name}</p>
+                  <p className="font-medium">{car.profiles?.full_name}</p>
                   <p className="text-sm text-gray-500">Joined Nov 2024</p>
                 </div>
               </div>
