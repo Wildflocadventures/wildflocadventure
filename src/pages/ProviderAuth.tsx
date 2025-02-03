@@ -17,8 +17,16 @@ const ProviderAuth = () => {
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
 
-  const validateForm = () => {
+  const validateForm = (isSignUp = false) => {
     if (!email || !password) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return false;
+    }
+    if (isSignUp && (!fullName || !phone)) {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
@@ -47,14 +55,7 @@ const ProviderAuth = () => {
 
   const handleProviderSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateForm() || !fullName || !phone) {
-      toast({
-        title: "Error",
-        description: "Please fill in all required fields",
-        variant: "destructive",
-      });
-      return;
-    }
+    if (!validateForm(true)) return;
 
     setIsLoading(true);
 
@@ -71,9 +72,13 @@ const ProviderAuth = () => {
 
       if (authError) {
         console.error("Signup error:", authError);
+        let errorMessage = authError.message;
+        if (authError.message.includes("already registered")) {
+          errorMessage = "This email is already registered. Please sign in instead.";
+        }
         toast({
           title: "Error",
-          description: authError.message,
+          description: errorMessage,
           variant: "destructive",
         });
         return;
