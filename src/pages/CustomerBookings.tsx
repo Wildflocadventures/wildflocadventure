@@ -1,32 +1,16 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { LogOut, Edit2 } from "lucide-react";
+import { LogOut, Calendar, Car, DollarSign } from "lucide-react";
 import { format } from "date-fns";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Calendar } from "@/components/ui/calendar";
 
 const CustomerBookings = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [bookings, setBookings] = useState<any[]>([]);
-  const [editingBooking, setEditingBooking] = useState<any>(null);
-  const [newDates, setNewDates] = useState<{
-    from: Date | undefined;
-    to: Date | undefined;
-  }>({
-    from: undefined,
-    to: undefined,
-  });
 
   useEffect(() => {
     fetchBookings();
@@ -45,11 +29,18 @@ const CustomerBookings = () => {
         *,
         cars (
           model,
+          year,
           rate_per_day,
-          license_plate
+          license_plate,
+          image_url,
+          seats,
+          profiles (
+            full_name
+          )
         )
       `)
-      .eq("customer_id", user.id);
+      .eq("customer_id", user.id)
+      .order('created_at', { ascending: false });
 
     if (error) {
       toast({
@@ -62,127 +53,121 @@ const CustomerBookings = () => {
     }
   };
 
-  const handleUpdateBooking = async () => {
-    if (!editingBooking || !newDates.from || !newDates.to) return;
-
-    const totalDays = Math.ceil(
-      (newDates.to.getTime() - newDates.from.getTime()) / (1000 * 60 * 60 * 24)
-    );
-    const totalAmount = totalDays * editingBooking.cars.rate_per_day;
-
-    const { error } = await supabase
-      .from("bookings")
-      .update({
-        start_date: newDates.from.toISOString(),
-        end_date: newDates.to.toISOString(),
-        total_amount: totalAmount
-      })
-      .eq('id', editingBooking.id);
-
-    if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update booking",
-        variant: "destructive",
-      });
-    } else {
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
       toast({
         title: "Success",
-        description: "Booking updated successfully",
+        description: "Logged out successfully",
       });
-      fetchBookings();
-      setEditingBooking(null);
-      setNewDates({ from: undefined, to: undefined });
+      navigate('/');
+    } catch (error) {
+      console.error("Error logging out:", error);
+      toast({
+        title: "Error",
+        description: "Failed to log out",
+        variant: "destructive",
+      });
     }
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate('/');
-  };
-
   return (
-    <div className="container py-8 relative">
-      <Button 
-        variant="outline" 
-        className="absolute top-4 right-4"
-        onClick={handleLogout}
-      >
-        <LogOut className="w-4 h-4 mr-2" />
-        Logout
-      </Button>
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white p-8">
+      <div className="max-w-6xl mx-auto">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">My Bookings</h1>
+          <Button 
+            variant="outline"
+            onClick={handleLogout}
+            className="bg-white"
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            Logout
+          </Button>
+        </div>
 
-      <h1 className="text-3xl font-bold mb-8">My Bookings</h1>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Your Bookings</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {bookings.map((booking) => (
-              <div key={booking.id} className="p-4 border rounded relative">
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button 
-                      variant="ghost" 
-                      size="icon"
-                      className="absolute top-2 right-2"
-                      onClick={() => {
-                        setEditingBooking(booking);
-                        setNewDates({
-                          from: new Date(booking.start_date),
-                          to: new Date(booking.end_date)
-                        });
-                      }}
-                    >
-                      <Edit2 className="h-4 w-4" />
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Update Booking Dates</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <Calendar
-                        mode="range"
-                        selected={{
-                          from: newDates.from,
-                          to: newDates.to,
-                        }}
-                        onSelect={(range) => {
-                          setNewDates({
-                            from: range?.from,
-                            to: range?.to,
-                          });
-                        }}
-                        numberOfMonths={2}
-                      />
-                      <Button 
-                        onClick={handleUpdateBooking}
-                        className="w-full"
-                        disabled={!newDates.from || !newDates.to}
-                      >
-                        Update Booking
-                      </Button>
+        <div className="grid gap-6">
+          {bookings.map((booking) => (
+            <Card key={booking.id} className="p-6 bg-white">
+              <div className="flex flex-col md:flex-row gap-6">
+                <div className="w-full md:w-1/3">
+                  {booking.cars.image_url ? (
+                    <img
+                      src={booking.cars.image_url}
+                      alt={booking.cars.model}
+                      className="w-full h-48 object-cover rounded-lg"
+                    />
+                  ) : (
+                    <div className="w-full h-48 bg-gray-100 rounded-lg flex items-center justify-center">
+                      <Car className="h-20 w-20 text-gray-400" />
                     </div>
-                  </DialogContent>
-                </Dialog>
-                <h3 className="font-medium">{booking.cars.model}</h3>
-                <p className="text-sm text-gray-600">License: {booking.cars.license_plate}</p>
-                <p className="text-sm text-gray-600">
-                  Dates: {format(new Date(booking.start_date), "LLL dd, y")} - {format(new Date(booking.end_date), "LLL dd, y")}
-                </p>
-                <p className="text-sm text-gray-600">Total Amount: ${booking.total_amount}</p>
-                <p className="text-sm text-gray-600">Status: {booking.status}</p>
+                  )}
+                </div>
+                
+                <div className="flex-1 space-y-4">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-900">
+                        {booking.cars.model} ({booking.cars.year})
+                      </h3>
+                      <p className="text-sm text-gray-500">
+                        Host: {booking.cars.profiles.full_name}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <div className="flex items-center gap-1 text-green-600">
+                        <DollarSign className="h-5 w-5" />
+                        <span className="text-xl font-bold">{booking.total_amount}</span>
+                      </div>
+                      <p className="text-sm text-gray-500">Total Amount</p>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <p className="text-sm text-gray-500">Start Date</p>
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-gray-400" />
+                        <span>{format(new Date(booking.start_date), "LLL dd, y")}</span>
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm text-gray-500">End Date</p>
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-gray-400" />
+                        <span>{format(new Date(booking.end_date), "LLL dd, y")}</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between pt-4 border-t">
+                    <p className="text-sm">
+                      License Plate: <span className="font-medium">{booking.cars.license_plate}</span>
+                    </p>
+                    <span className="px-3 py-1 text-sm rounded-full bg-blue-100 text-blue-800">
+                      {booking.status}
+                    </span>
+                  </div>
+                </div>
               </div>
-            ))}
-            {bookings.length === 0 && (
-              <p className="text-center text-gray-500">No bookings found</p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+            </Card>
+          ))}
+          
+          {bookings.length === 0 && (
+            <Card className="p-12 text-center bg-white">
+              <Car className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+              <h3 className="text-xl font-medium text-gray-900 mb-2">No Bookings Found</h3>
+              <p className="text-gray-500">You haven't made any bookings yet.</p>
+              <Button 
+                className="mt-6"
+                onClick={() => navigate('/')}
+              >
+                Browse Cars
+              </Button>
+            </Card>
+          )}
+        </div>
+      </div>
     </div>
   );
 };

@@ -1,7 +1,8 @@
 import { Button } from "@/components/ui/button";
-import { User, Users, Calendar, LogOut } from "lucide-react";
+import { User, Users, BookOpen, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Profile } from "@/types/supabase";
+import { useToast } from "@/hooks/use-toast";
 
 interface AuthButtonsProps {
   session: any;
@@ -11,6 +12,7 @@ interface AuthButtonsProps {
 
 export const AuthButtons = ({ session, userProfile, onLogout }: AuthButtonsProps) => {
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const handleCustomerLogin = () => {
     navigate("/auth");
@@ -21,11 +23,45 @@ export const AuthButtons = ({ session, userProfile, onLogout }: AuthButtonsProps
   };
 
   const handleMyBookings = () => {
+    if (!session) {
+      toast({
+        title: "Authentication required",
+        description: "Please login to view your bookings",
+        variant: "destructive",
+      });
+      return;
+    }
     navigate("/customer/bookings");
   };
 
   const handleDashboard = () => {
+    if (!session) {
+      toast({
+        title: "Authentication required",
+        description: "Please login to access your dashboard",
+        variant: "destructive",
+      });
+      return;
+    }
     navigate("/provider/dashboard");
+  };
+
+  const handleLogoutClick = async () => {
+    try {
+      await onLogout();
+      toast({
+        title: "Success",
+        description: "Logged out successfully",
+      });
+      navigate('/');
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to logout. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   if (!session) {
@@ -59,7 +95,7 @@ export const AuthButtons = ({ session, userProfile, onLogout }: AuthButtonsProps
           className="bg-white/90 backdrop-blur-sm hover:bg-white/70 transition-all"
           onClick={handleMyBookings}
         >
-          <Calendar className="w-4 h-4 mr-2" />
+          <BookOpen className="w-4 h-4 mr-2" />
           My Bookings
         </Button>
       )}
@@ -69,14 +105,14 @@ export const AuthButtons = ({ session, userProfile, onLogout }: AuthButtonsProps
           className="bg-white/90 backdrop-blur-sm hover:bg-white/70 transition-all"
           onClick={handleDashboard}
         >
-          <Calendar className="w-4 h-4 mr-2" />
+          <BookOpen className="w-4 h-4 mr-2" />
           Dashboard
         </Button>
       )}
       <Button
         variant="outline"
         className="bg-white/90 backdrop-blur-sm hover:bg-white/70 transition-all"
-        onClick={onLogout}
+        onClick={handleLogoutClick}
       >
         <LogOut className="w-4 h-4 mr-2" />
         Logout
