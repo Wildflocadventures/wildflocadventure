@@ -59,23 +59,6 @@ const ProviderAuth = () => {
     setIsLoading(true);
 
     try {
-      // First, check if the user already exists
-      const { data: existingUser, error: checkError } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('email', email)
-        .single();
-
-      if (existingUser) {
-        toast({
-          title: "Error",
-          description: "An account with this email already exists",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
-      }
-
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
@@ -146,7 +129,6 @@ const ProviderAuth = () => {
     setIsLoading(true);
 
     try {
-      // First attempt to sign in
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -184,7 +166,6 @@ const ProviderAuth = () => {
 
       if (profileError) {
         console.error("Profile fetch error:", profileError);
-        // Sign out the user since they're not properly set up as a provider
         await supabase.auth.signOut();
         toast({
           title: "Error",
@@ -195,7 +176,6 @@ const ProviderAuth = () => {
       }
 
       if (profileData.role !== 'provider') {
-        // Sign out the user since they're not a provider
         await supabase.auth.signOut();
         toast({
           title: "Error",
