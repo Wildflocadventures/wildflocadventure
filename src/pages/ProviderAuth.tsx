@@ -59,6 +59,23 @@ const ProviderAuth = () => {
     setIsLoading(true);
 
     try {
+      // First, check if the user already exists
+      const { data: existingUser, error: checkError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('email', email)
+        .single();
+
+      if (existingUser) {
+        toast({
+          title: "Error",
+          description: "An account with this email already exists",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
@@ -100,7 +117,7 @@ const ProviderAuth = () => {
         console.error("Profile update error:", profileError);
         toast({
           title: "Error",
-          description: profileError.message,
+          description: "Failed to set up provider profile",
           variant: "destructive",
         });
       } else {
@@ -129,16 +146,21 @@ const ProviderAuth = () => {
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      // First attempt to sign in
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (error) {
-        console.error("Login error:", error);
+      if (signInError) {
+        console.error("Login error:", signInError);
+        let errorMessage = "Invalid email or password";
+        if (signInError.message.includes("Email not confirmed")) {
+          errorMessage = "Please confirm your email address before signing in";
+        }
         toast({
           title: "Error",
-          description: "Invalid email or password",
+          description: errorMessage,
           variant: "destructive",
         });
         return;
@@ -162,6 +184,8 @@ const ProviderAuth = () => {
 
       if (profileError) {
         console.error("Profile fetch error:", profileError);
+        // Sign out the user since they're not properly set up as a provider
+        await supabase.auth.signOut();
         toast({
           title: "Error",
           description: "Failed to verify provider status",
@@ -171,12 +195,13 @@ const ProviderAuth = () => {
       }
 
       if (profileData.role !== 'provider') {
+        // Sign out the user since they're not a provider
+        await supabase.auth.signOut();
         toast({
           title: "Error",
-          description: "This account is not registered as a provider",
+          description: "This account is not registered as a provider. Please sign up as a provider first.",
           variant: "destructive",
         });
-        await supabase.auth.signOut();
         return;
       }
 
