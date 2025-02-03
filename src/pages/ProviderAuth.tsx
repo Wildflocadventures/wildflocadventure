@@ -98,18 +98,20 @@ const ProviderAuth = () => {
 
       if (profileError) {
         console.error("Profile update error:", profileError);
+        await supabase.auth.signOut();
         toast({
           title: "Error",
           description: "Failed to set up provider profile",
           variant: "destructive",
         });
-      } else {
-        toast({
-          title: "Success",
-          description: "Please check your email to confirm your account",
-        });
-        navigate("/provider/dashboard");
+        return;
       }
+
+      toast({
+        title: "Success",
+        description: "Please check your email to confirm your account",
+      });
+      navigate("/provider/dashboard");
     } catch (error: any) {
       console.error("Unexpected error:", error);
       toast({
@@ -157,7 +159,6 @@ const ProviderAuth = () => {
         return;
       }
 
-      // Check if the user is a provider
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('role')
