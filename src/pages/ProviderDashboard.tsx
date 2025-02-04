@@ -7,30 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { LogOut, Edit2, Car } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Car, Upload } from "lucide-react";
 import { format } from "date-fns";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 
 const ProviderDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [cars, setCars] = useState<any[]>([]);
-  const [selectedCar, setSelectedCar] = useState<string | null>(null);
-  const [editingCar, setEditingCar] = useState<any>(null);
-  const [unavailabilityDates, setUnavailabilityDates] = useState<{
-    from: Date | undefined;
-    to: Date | undefined;
-  }>({
-    from: undefined,
-    to: undefined,
-  });
   const [newCar, setNewCar] = useState({
     model: "",
     year: "",
@@ -39,6 +22,14 @@ const ProviderDashboard = () => {
     rate_per_day: "",
     description: ""
   });
+  const [selectedDates, setSelectedDates] = useState<{
+    from: Date | undefined;
+    to: Date | undefined;
+  }>({
+    from: undefined,
+    to: undefined,
+  });
+  const [selectedCarId, setSelectedCarId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchCars = async () => {
@@ -74,11 +65,6 @@ const ProviderDashboard = () => {
     fetchCars();
   }, []);
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate('/');
-  };
-
   const handleAddCar = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
@@ -106,10 +92,9 @@ const ProviderDashboard = () => {
     } else {
       toast({
         title: "Success",
-        description: "Car added successfully. Please set its unavailability dates.",
+        description: "Car added successfully",
       });
       setCars([...cars, carData]);
-      setSelectedCar(carData.id);
       setNewCar({
         model: "",
         year: "",
@@ -118,105 +103,6 @@ const ProviderDashboard = () => {
         rate_per_day: "",
         description: ""
       });
-    }
-  };
-
-  const handleUpdateCar = async () => {
-    if (!editingCar) return;
-
-    const { error } = await supabase
-      .from("cars")
-      .update({
-        model: editingCar.model,
-        year: parseInt(editingCar.year),
-        license_plate: editingCar.license_plate,
-        seats: parseInt(editingCar.seats),
-        rate_per_day: parseFloat(editingCar.rate_per_day),
-        description: editingCar.description
-      })
-      .eq('id', editingCar.id);
-
-    if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update car details",
-        variant: "destructive",
-      });
-    } else {
-      toast({
-        title: "Success",
-        description: "Car details updated successfully",
-      });
-      // Refresh cars list
-      const { data: { user } } = await supabase.auth.getUser();
-      const { data: updatedCars } = await supabase
-        .from("cars")
-        .select(`
-          *,
-          car_availability (
-            start_date,
-            end_date,
-            is_available
-          )
-        `)
-        .eq("provider_id", user?.id);
-      
-      if (updatedCars) {
-        setCars(updatedCars);
-      }
-      setEditingCar(null);
-    }
-  };
-
-  const handleSetUnavailability = async () => {
-    if (!selectedCar || !unavailabilityDates.from || !unavailabilityDates.to) {
-      toast({
-        title: "Error",
-        description: "Please select a car and unavailability dates",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const { error } = await supabase
-      .from("car_availability")
-      .insert({
-        car_id: selectedCar,
-        start_date: unavailabilityDates.from.toISOString(),
-        end_date: unavailabilityDates.to.toISOString(),
-        is_available: false
-      });
-
-    if (error) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    } else {
-      toast({
-        title: "Success",
-        description: "Car unavailability dates set successfully",
-      });
-      // Refresh cars list
-      const { data: { user } } = await supabase.auth.getUser();
-      const { data: updatedCars } = await supabase
-        .from("cars")
-        .select(`
-          *,
-          car_availability (
-            start_date,
-            end_date,
-            is_available
-          )
-        `)
-        .eq("provider_id", user?.id);
-      
-      if (updatedCars) {
-        setCars(updatedCars);
-      }
-      setSelectedCar(null);
-      setUnavailabilityDates({ from: undefined, to: undefined });
     }
   };
 
@@ -232,14 +118,7 @@ const ProviderDashboard = () => {
         .from('car_images')
         .upload(filePath, file);
 
-      if (uploadError) {
-        toast({
-          title: "Error",
-          description: "Failed to upload image",
-          variant: "destructive",
-        });
-        return;
-      }
+      if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage
         .from('car_images')
@@ -250,14 +129,7 @@ const ProviderDashboard = () => {
         .update({ image_url: publicUrl })
         .eq('id', carId);
 
-      if (updateError) {
-        toast({
-          title: "Error",
-          description: "Failed to update car image",
-          variant: "destructive",
-        });
-        return;
-      }
+      if (updateError) throw updateError;
 
       // Refresh cars list
       const { data: { user } } = await supabase.auth.getUser();
@@ -290,17 +162,64 @@ const ProviderDashboard = () => {
     }
   };
 
-  return (
-    <div className="container py-8 relative">
-      <Button 
-        variant="outline" 
-        className="absolute top-4 right-4"
-        onClick={handleLogout}
-      >
-        <LogOut className="w-4 h-4 mr-2" />
-        Logout
-      </Button>
+  const handleSetUnavailability = async () => {
+    if (!selectedCarId || !selectedDates.from || !selectedDates.to) {
+      toast({
+        title: "Error",
+        description: "Please select a car and date range",
+        variant: "destructive",
+      });
+      return;
+    }
 
+    try {
+      const { error } = await supabase
+        .from("car_availability")
+        .insert({
+          car_id: selectedCarId,
+          start_date: selectedDates.from.toISOString(),
+          end_date: selectedDates.to.toISOString(),
+          is_available: false
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Unavailability dates set successfully",
+      });
+
+      // Refresh cars list
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: updatedCars } = await supabase
+        .from("cars")
+        .select(`
+          *,
+          car_availability (
+            start_date,
+            end_date,
+            is_available
+          )
+        `)
+        .eq("provider_id", user?.id);
+      
+      if (updatedCars) {
+        setCars(updatedCars);
+      }
+
+      setSelectedCarId(null);
+      setSelectedDates({ from: undefined, to: undefined });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  return (
+    <div className="container mx-auto py-8 px-4">
       <h1 className="text-3xl font-bold mb-8">Provider Dashboard</h1>
       
       <div className="grid md:grid-cols-2 gap-8">
@@ -310,7 +229,7 @@ const ProviderDashboard = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label>Car Model</Label>
+              <Label>Model</Label>
               <Input
                 value={newCar.model}
                 onChange={(e) => setNewCar({...newCar, model: e.target.value})}
@@ -379,8 +298,8 @@ const ProviderDashboard = () => {
               <Label>Select Car</Label>
               <select
                 className="w-full p-2 border rounded"
-                value={selectedCar || ""}
-                onChange={(e) => setSelectedCar(e.target.value)}
+                value={selectedCarId || ""}
+                onChange={(e) => setSelectedCarId(e.target.value)}
               >
                 <option value="">Select a car</option>
                 {cars.map((car) => (
@@ -392,190 +311,103 @@ const ProviderDashboard = () => {
             </div>
             
             <div className="space-y-2">
-              <Label>Select Dates When Car is NOT Available</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="w-full justify-start text-left font-normal">
-                    {unavailabilityDates.from ? (
-                      unavailabilityDates.to ? (
-                        <>
-                          {format(unavailabilityDates.from, "LLL dd, y")} -{" "}
-                          {format(unavailabilityDates.to, "LLL dd, y")}
-                        </>
-                      ) : (
-                        format(unavailabilityDates.from, "LLL dd, y")
-                      )
-                    ) : (
-                      <span>Pick unavailability dates</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    initialFocus
-                    mode="range"
-                    defaultMonth={unavailabilityDates.from}
-                    selected={{
-                      from: unavailabilityDates.from,
-                      to: unavailabilityDates.to,
-                    }}
-                    onSelect={(range) => {
-                      setUnavailabilityDates({
-                        from: range?.from,
-                        to: range?.to,
-                      });
-                    }}
-                    numberOfMonths={2}
-                  />
-                </PopoverContent>
-              </Popover>
+              <Label>Select Unavailable Dates</Label>
+              <Calendar
+                mode="range"
+                selected={{
+                  from: selectedDates.from,
+                  to: selectedDates.to,
+                }}
+                onSelect={(range: any) => setSelectedDates(range)}
+                className="rounded-md border"
+              />
             </div>
             
             <Button 
               onClick={handleSetUnavailability}
               className="w-full"
-              disabled={!selectedCar || !unavailabilityDates.from || !unavailabilityDates.to}
+              disabled={!selectedCarId || !selectedDates.from || !selectedDates.to}
             >
               Set Unavailability
             </Button>
           </CardContent>
         </Card>
+      </div>
 
-        <Card className="md:col-span-2">
-          <CardHeader>
-            <CardTitle>Your Cars</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {cars.map((car) => (
-                <div key={car.id} className="p-4 border rounded relative">
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        className="absolute top-2 right-2"
-                        onClick={() => setEditingCar(car)}
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Edit Car Details</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4 py-4">
-                        <div className="space-y-2">
-                          <Label>Car Model</Label>
-                          <Input
-                            value={editingCar?.model || ''}
-                            onChange={(e) => setEditingCar({...editingCar, model: e.target.value})}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Year</Label>
-                          <Input
-                            type="number"
-                            value={editingCar?.year || ''}
-                            onChange={(e) => setEditingCar({...editingCar, year: e.target.value})}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>License Plate</Label>
-                          <Input
-                            value={editingCar?.license_plate || ''}
-                            onChange={(e) => setEditingCar({...editingCar, license_plate: e.target.value})}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Number of Seats</Label>
-                          <Input
-                            type="number"
-                            value={editingCar?.seats || ''}
-                            onChange={(e) => setEditingCar({...editingCar, seats: e.target.value})}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Rate per Day ($)</Label>
-                          <Input
-                            type="number"
-                            value={editingCar?.rate_per_day || ''}
-                            onChange={(e) => setEditingCar({...editingCar, rate_per_day: e.target.value})}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Description</Label>
-                          <Input
-                            value={editingCar?.description || ''}
-                            onChange={(e) => setEditingCar({...editingCar, description: e.target.value})}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Car Image</Label>
-                          <Input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => handleImageUpload(e, car.id)}
-                          />
-                        </div>
-                        <Button 
-                          onClick={handleUpdateCar}
-                          className="w-full"
-                        >
-                          Update Car
-                        </Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-
-                  <div className="flex gap-4">
-                    {car.image_url ? (
-                      <img 
-                        src={car.image_url} 
-                        alt={car.model}
-                        className="w-32 h-32 object-cover rounded"
-                      />
-                    ) : (
-                      <div className="w-32 h-32 bg-gray-100 flex items-center justify-center rounded">
-                        <Car className="w-12 h-12 text-gray-400" />
-                      </div>
-                    )}
-                    <div>
-                      <h3 className="font-medium">{car.model} ({car.year})</h3>
-                      <p className="text-sm text-gray-600">License: {car.license_plate}</p>
-                      <p className="text-sm text-gray-600">Rate: ${car.rate_per_day}/day</p>
-                      <p className="text-sm text-gray-600">Seats: {car.seats}</p>
-                      {car.description && (
-                        <p className="text-sm text-gray-600 mt-2">{car.description}</p>
-                      )}
+      <div className="mt-8">
+        <h2 className="text-2xl font-bold mb-4">Your Cars</h2>
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {cars.map((car) => (
+            <Card key={car.id}>
+              <CardContent className="p-6">
+                <div className="aspect-video mb-4 bg-gray-100 rounded-lg overflow-hidden">
+                  {car.image_url ? (
+                    <img
+                      src={car.image_url}
+                      alt={car.model}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Car className="w-12 h-12 text-gray-400" />
                     </div>
+                  )}
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="font-medium">{car.model}</h3>
+                    <p className="text-sm text-gray-500">
+                      {car.year} • {car.license_plate}
+                    </p>
                   </div>
-
-                  <div className="mt-2">
-                    <h4 className="font-medium text-sm">Unavailable Periods:</h4>
-                    {car.car_availability && car.car_availability.length > 0 ? (
-                      <ul className="list-disc list-inside">
+                  <div className="space-y-2">
+                    <p className="text-sm">
+                      <span className="font-medium">Rate:</span> ${car.rate_per_day}/day
+                    </p>
+                    <p className="text-sm">
+                      <span className="font-medium">Seats:</span> {car.seats}
+                    </p>
+                    {car.description && (
+                      <p className="text-sm text-gray-600">{car.description}</p>
+                    )}
+                  </div>
+                  <div>
+                    <Label htmlFor={`image-${car.id}`} className="cursor-pointer">
+                      <div className="flex items-center gap-2 text-sm text-blue-600">
+                        <Upload className="w-4 h-4" />
+                        Upload Image
+                      </div>
+                    </Label>
+                    <Input
+                      id={`image-${car.id}`}
+                      type="file"
+                      className="hidden"
+                      accept="image/*"
+                      onChange={(e) => handleImageUpload(e, car.id)}
+                    />
+                  </div>
+                  {car.car_availability && car.car_availability.length > 0 && (
+                    <div>
+                      <h4 className="font-medium text-sm mb-2">Unavailable Dates:</h4>
+                      <ul className="text-sm text-red-600 space-y-1">
                         {car.car_availability
                           .filter((availability: any) => !availability.is_available)
                           .map((availability: any, index: number) => (
-                          <li key={index} className="text-sm text-red-600">
-                            {format(new Date(availability.start_date), "LLL dd, y")} - {format(new Date(availability.end_date), "LLL dd, y")}
+                          <li key={index}>
+                            {format(new Date(availability.start_date), "MMM d, yyyy")} - {format(new Date(availability.end_date), "MMM d, yyyy")}
                           </li>
                         ))}
                       </ul>
-                    ) : (
-                      <p className="text-sm text-green-500">No unavailability periods set</p>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     </div>
   );
 };
 
 export default ProviderDashboard;
-

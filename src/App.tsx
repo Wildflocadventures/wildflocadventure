@@ -10,6 +10,8 @@ import Index from "@/pages/Index";
 import CarDetails from "@/pages/CarDetails";
 import Auth from "@/pages/Auth";
 import CustomerBookings from "@/pages/CustomerBookings";
+import ProviderAuth from "@/pages/ProviderAuth";
+import ProviderDashboard from "@/pages/ProviderDashboard";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -72,7 +74,7 @@ function App() {
   }, []);
 
   if (!isInitialized) {
-    return null; // Or a loading spinner
+    return null;
   }
 
   return (
@@ -85,6 +87,8 @@ function App() {
               <Route path="/" element={<Index />} />
               <Route path="/car/:id" element={<CarDetails />} />
               <Route path="/auth" element={<Auth />} />
+              <Route path="/provider/auth" element={<ProviderAuth />} />
+              <Route path="/provider/dashboard" element={<ProviderDashboard />} />
               <Route path="/customer/bookings" element={<CustomerBookings />} />
             </Routes>
           </div>

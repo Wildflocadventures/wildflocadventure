@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { LogIn, UserPlus, LogOut } from "lucide-react";
+import { LogIn, UserPlus, LogOut, Car } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -17,8 +17,16 @@ export const Navbar = ({ session, userProfile }: NavbarProps) => {
     navigate("/auth");
   };
 
+  const handleProviderLogin = () => {
+    navigate("/provider/auth");
+  };
+
   const handleSignup = () => {
     navigate("/auth");
+  };
+
+  const handleProviderDashboard = () => {
+    navigate("/provider/dashboard");
   };
 
   const handleLogout = async () => {
@@ -58,7 +66,15 @@ export const Navbar = ({ session, userProfile }: NavbarProps) => {
                   className="flex items-center gap-2"
                 >
                   <LogIn className="w-4 h-4" />
-                  Login
+                  Customer Login
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleProviderLogin}
+                  className="flex items-center gap-2"
+                >
+                  <Car className="w-4 h-4" />
+                  Provider Login
                 </Button>
                 <Button
                   onClick={handleSignup}
@@ -69,14 +85,26 @@ export const Navbar = ({ session, userProfile }: NavbarProps) => {
                 </Button>
               </>
             ) : (
-              <Button
-                variant="outline"
-                onClick={handleLogout}
-                className="flex items-center gap-2"
-              >
-                <LogOut className="w-4 h-4" />
-                Logout
-              </Button>
+              <>
+                {userProfile?.role === 'provider' && (
+                  <Button
+                    variant="outline"
+                    onClick={handleProviderDashboard}
+                    className="flex items-center gap-2"
+                  >
+                    <Car className="w-4 h-4" />
+                    Dashboard
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  onClick={handleLogout}
+                  className="flex items-center gap-2"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Logout
+                </Button>
+              </>
             )}
           </div>
         </div>

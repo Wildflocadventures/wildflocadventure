@@ -11,11 +11,14 @@ const ProviderAuth = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
 
   const validateForm = () => {
-    if (!email || !password) {
+    if (!email || !password || (isSignUp && (!fullName || !phone))) {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
@@ -34,83 +37,66 @@ const ProviderAuth = () => {
     return true;
   };
 
-  const handleProviderSignIn = async (e: React.FormEvent) => {
+  const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
 
     setIsLoading(true);
 
     try {
-      // First attempt to sign in
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      if (isSignUp) {
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              full_name: fullName,
+              phone: phone,
+              role: 'provider'
+            }
+          }
+        });
 
-      if (signInError) {
-        console.error("Sign in error:", signInError);
-        let errorMessage = "Invalid email or password";
-        
-        if (signInError.message.includes("Email not confirmed")) {
-          errorMessage = "Please confirm your email address before signing in";
+        if (signUpError) throw signUpError;
+
+        toast({
+          title: "Success",
+          description: "Please check your email to verify your account",
+        });
+      } else {
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (signInError) throw signInError;
+
+        if (!signInData.user) {
+          throw new Error("No user data returned");
         }
-        
+
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', signInData.user.id)
+          .single();
+
+        if (profile?.role !== 'provider') {
+          await supabase.auth.signOut();
+          throw new Error("This account is not registered as a provider");
+        }
+
         toast({
-          title: "Authentication Error",
-          description: errorMessage,
-          variant: "destructive",
+          title: "Success",
+          description: "Successfully signed in",
         });
-        return;
+        navigate("/provider/dashboard");
       }
-
-      if (!signInData.user) {
-        toast({
-          title: "Error",
-          description: "Failed to sign in",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Check if the user is a provider
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', signInData.user.id)
-        .single();
-
-      if (profileError) {
-        console.error("Profile fetch error:", profileError);
-        await supabase.auth.signOut();
-        toast({
-          title: "Error",
-          description: "Failed to verify provider status",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (profileData.role !== 'provider') {
-        await supabase.auth.signOut();
-        toast({
-          title: "Access Denied",
-          description: "This account is not registered as a provider",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      toast({
-        title: "Success",
-        description: "Successfully signed in",
-      });
-      navigate("/provider/dashboard");
-      
     } catch (error: any) {
-      console.error("Unexpected error:", error);
+      console.error("Auth error:", error);
       toast({
         title: "Error",
-        description: "An unexpected error occurred",
+        description: error.message,
         variant: "destructive",
       });
     } finally {
@@ -122,13 +108,17 @@ const ProviderAuth = () => {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-blue-50 to-white p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl text-center">Service Provider Portal</CardTitle>
+          <CardTitle className="text-2xl text-center">
+            {isSignUp ? "Create Provider Account" : "Provider Login"}
+          </CardTitle>
           <CardDescription className="text-center">
-            Sign in to your provider account
+            {isSignUp
+              ? "Sign up as a service provider"
+              : "Sign in to your provider account"}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleProviderSignIn} className="space-y-4">
+          <form onSubmit={handleAuth} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -150,8 +140,46 @@ const ProviderAuth = () => {
                 required
               />
             </div>
+            {isSignUp && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="fullName">Full Name</Label>
+                  <Input
+                    id="fullName"
+                    type="text"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone Number</Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    required
+                  />
+                </div>
+              </>
+            )}
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Signing in..." : "Sign In"}
+              {isLoading
+                ? "Processing..."
+                : isSignUp
+                ? "Sign Up"
+                : "Sign In"}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              className="w-full"
+              onClick={() => setIsSignUp(!isSignUp)}
+            >
+              {isSignUp
+                ? "Already have an account? Sign In"
+                : "Need an account? Sign Up"}
             </Button>
           </form>
         </CardContent>
