@@ -45,24 +45,64 @@ const ProviderAuth = () => {
 
     try {
       if (isSignUp) {
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              full_name: fullName,
-              phone: phone,
-              role: 'provider'
-            }
+        // First check if user exists
+        const { data: existingUser } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', email)
+          .single();
+
+        if (existingUser) {
+          if (existingUser.role === 'provider') {
+            throw new Error("This email is already registered as a provider");
           }
-        });
 
-        if (signUpError) throw signUpError;
+          // Try to sign in first to verify credentials
+          const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
 
-        toast({
-          title: "Success",
-          description: "Please check your email to verify your account",
-        });
+          if (signInError) throw signInError;
+
+          // Update existing user to provider role
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update({ 
+              role: 'provider',
+              full_name: fullName,
+              phone: phone 
+            })
+            .eq('id', signInData.user.id);
+
+          if (updateError) throw updateError;
+
+          toast({
+            title: "Success",
+            description: "Account upgraded to provider successfully",
+          });
+          navigate("/provider/dashboard");
+        } else {
+          // Create new provider account
+          const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+              data: {
+                full_name: fullName,
+                phone: phone,
+                role: 'provider'
+              }
+            }
+          });
+
+          if (signUpError) throw signUpError;
+
+          toast({
+            title: "Success",
+            description: "Please check your email to verify your account",
+          });
+        }
       } else {
         const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
           email,
