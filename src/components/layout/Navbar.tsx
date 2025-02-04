@@ -14,11 +14,7 @@ export const Navbar = ({ session, userProfile }: NavbarProps) => {
   const { toast } = useToast();
 
   const handleLogin = () => {
-    if (userProfile?.role === 'provider') {
-      navigate("/provider/auth");
-    } else {
-      navigate("/auth");
-    }
+    navigate("/auth");
   };
 
   const handleSignup = () => {
