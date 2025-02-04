@@ -23,14 +23,6 @@ const ProviderAuth = () => {
       });
       return false;
     }
-    if (password.length < 6) {
-      toast({
-        title: "Error",
-        description: "Password must be at least 6 characters long",
-        variant: "destructive",
-      });
-      return false;
-    }
     if (!email.includes('@')) {
       toast({
         title: "Error",
@@ -49,26 +41,29 @@ const ProviderAuth = () => {
     setIsLoading(true);
 
     try {
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+      // First attempt to sign in
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (signInError) {
-        console.error("Login error:", signInError);
+        console.error("Sign in error:", signInError);
         let errorMessage = "Invalid email or password";
+        
         if (signInError.message.includes("Email not confirmed")) {
           errorMessage = "Please confirm your email address before signing in";
         }
+        
         toast({
-          title: "Error",
+          title: "Authentication Error",
           description: errorMessage,
           variant: "destructive",
         });
         return;
       }
 
-      if (!data.user) {
+      if (!signInData.user) {
         toast({
           title: "Error",
           description: "Failed to sign in",
@@ -77,10 +72,11 @@ const ProviderAuth = () => {
         return;
       }
 
+      // Check if the user is a provider
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('role')
-        .eq('id', data.user.id)
+        .eq('id', signInData.user.id)
         .single();
 
       if (profileError) {
@@ -97,8 +93,8 @@ const ProviderAuth = () => {
       if (profileData.role !== 'provider') {
         await supabase.auth.signOut();
         toast({
-          title: "Error",
-          description: "This account is not registered as a provider. Please contact support.",
+          title: "Access Denied",
+          description: "This account is not registered as a provider",
           variant: "destructive",
         });
         return;
@@ -109,6 +105,7 @@ const ProviderAuth = () => {
         description: "Successfully signed in",
       });
       navigate("/provider/dashboard");
+      
     } catch (error: any) {
       console.error("Unexpected error:", error);
       toast({
