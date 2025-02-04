@@ -5,6 +5,7 @@ import { Toaster as SonnerToaster } from "sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { Navbar } from "@/components/layout/Navbar";
 import Index from "@/pages/Index";
 import CarDetails from "@/pages/CarDetails";
 import Auth from "@/pages/Auth";
@@ -23,6 +24,8 @@ const queryClient = new QueryClient({
 
 function App() {
   const [isInitialized, setIsInitialized] = useState(false);
+  const [session, setSession] = useState<any>(null);
+  const [userProfile, setUserProfile] = useState<any>(null);
 
   useEffect(() => {
     const initialize = async () => {
@@ -30,8 +33,15 @@ function App() {
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error) {
           console.error("Error getting session:", error);
-          // Clear any stale session data
           await supabase.auth.signOut();
+        } else if (session?.user) {
+          setSession(session);
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+          setUserProfile(profile);
         }
       } catch (error) {
         console.error("Initialization error:", error);
@@ -43,9 +53,18 @@ function App() {
     initialize();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      setSession(session);
+      
       if (event === 'SIGNED_OUT') {
-        // Clear any application state if needed
+        setUserProfile(null);
         queryClient.clear();
+      } else if (session?.user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+        setUserProfile(profile);
       }
     });
 
@@ -62,14 +81,17 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <Router>
         <TooltipProvider>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/car/:id" element={<CarDetails />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/provider/auth" element={<ProviderAuth />} />
-            <Route path="/provider/dashboard" element={<ProviderDashboard />} />
-            <Route path="/customer/bookings" element={<CustomerBookings />} />
-          </Routes>
+          <div className="min-h-screen pt-16">
+            <Navbar session={session} userProfile={userProfile} />
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/car/:id" element={<CarDetails />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/provider/auth" element={<ProviderAuth />} />
+              <Route path="/provider/dashboard" element={<ProviderDashboard />} />
+              <Route path="/customer/bookings" element={<CustomerBookings />} />
+            </Routes>
+          </div>
           <Toaster />
           <SonnerToaster />
         </TooltipProvider>
