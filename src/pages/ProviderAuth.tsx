@@ -1,58 +1,38 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { ProviderAuthForm } from "@/components/auth/ProviderAuthForm";
 
 const ProviderAuth = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
-  const [phone, setPhone] = useState("");
 
-  const validateForm = () => {
-    if (!email || !password || (isSignUp && (!fullName || !phone))) {
-      toast({
-        title: "Error",
-        description: "Please fill in all required fields",
-        variant: "destructive",
-      });
-      return false;
-    }
-    if (!email.includes('@')) {
-      toast({
-        title: "Error",
-        description: "Please enter a valid email address",
-        variant: "destructive",
-      });
-      return false;
-    }
-    return true;
-  };
-
-  const handleAuth = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validateForm()) return;
-
+  const handleAuth = async ({
+    email,
+    password,
+    fullName,
+    phone,
+  }: {
+    email: string;
+    password: string;
+    fullName: string;
+    phone: string;
+  }) => {
     setIsLoading(true);
 
     try {
       if (isSignUp) {
-        // Create new provider account
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        const { error: signUpError } = await supabase.auth.signUp({
           email,
           password,
           options: {
             data: {
               full_name: fullName,
-              phone: phone,
+              phone,
               role: 'provider'
             }
           }
@@ -65,7 +45,6 @@ const ProviderAuth = () => {
           description: "Please check your email to verify your account",
         });
       } else {
-        // Sign in
         const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
           email,
           password,
@@ -73,18 +52,11 @@ const ProviderAuth = () => {
 
         if (signInError) throw signInError;
 
-        if (!signInData.user) {
-          throw new Error("No user data returned");
-        }
-
-        // Check if user is a provider
-        const { data: profile, error: profileError } = await supabase
+        const { data: profile } = await supabase
           .from('profiles')
           .select('role')
           .eq('id', signInData.user.id)
           .single();
-
-        if (profileError) throw profileError;
 
         if (profile?.role !== 'provider') {
           await supabase.auth.signOut();
@@ -99,18 +71,22 @@ const ProviderAuth = () => {
       }
     } catch (error: any) {
       console.error("Auth error:", error);
+      let errorMessage = "An unexpected error occurred";
+      
+      if (error.message === "User already registered") {
+        errorMessage = "This email is already registered. Please sign in instead.";
+        setIsSignUp(false);
+      } else if (error.message === "Invalid login credentials") {
+        errorMessage = "Invalid email or password";
+      } else if (error.message === "This account is not registered as a provider") {
+        errorMessage = "This account is not registered as a provider";
+      }
+
       toast({
         title: "Error",
-        description: error.message || "An error occurred",
+        description: errorMessage,
         variant: "destructive",
       });
-      if (error.message === "User already registered") {
-        toast({
-          title: "Info",
-          description: "Please sign in instead",
-        });
-        setIsSignUp(false);
-      }
     } finally {
       setIsLoading(false);
     }
@@ -130,70 +106,12 @@ const ProviderAuth = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleAuth} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="m@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-            {isSignUp && (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="fullName">Full Name</Label>
-                  <Input
-                    id="fullName"
-                    type="text"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number</Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    required
-                  />
-                </div>
-              </>
-            )}
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading
-                ? "Processing..."
-                : isSignUp
-                ? "Sign Up"
-                : "Sign In"}
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              className="w-full"
-              onClick={() => setIsSignUp(!isSignUp)}
-            >
-              {isSignUp
-                ? "Already have an account? Sign In"
-                : "Need an account? Sign Up"}
-            </Button>
-          </form>
+          <ProviderAuthForm
+            isSignUp={isSignUp}
+            isLoading={isLoading}
+            onSubmit={handleAuth}
+            onToggleMode={() => setIsSignUp(!isSignUp)}
+          />
         </CardContent>
       </Card>
     </div>
