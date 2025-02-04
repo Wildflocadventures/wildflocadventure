@@ -45,65 +45,27 @@ const ProviderAuth = () => {
 
     try {
       if (isSignUp) {
-        // First check if user exists
-        const { data: existingUser } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', email)
-          .single();
-
-        if (existingUser) {
-          if (existingUser.role === 'provider') {
-            throw new Error("This email is already registered as a provider");
-          }
-
-          // Try to sign in first to verify credentials
-          const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-          });
-
-          if (signInError) throw signInError;
-
-          // Update existing user to provider role
-          const { error: updateError } = await supabase
-            .from('profiles')
-            .update({ 
-              role: 'provider',
+        // Create new provider account
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
               full_name: fullName,
-              phone: phone 
-            })
-            .eq('id', signInData.user.id);
-
-          if (updateError) throw updateError;
-
-          toast({
-            title: "Success",
-            description: "Account upgraded to provider successfully",
-          });
-          navigate("/provider/dashboard");
-        } else {
-          // Create new provider account
-          const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-            email,
-            password,
-            options: {
-              data: {
-                full_name: fullName,
-                phone: phone,
-                role: 'provider'
-              }
+              phone: phone,
+              role: 'provider'
             }
-          });
+          }
+        });
 
-          if (signUpError) throw signUpError;
+        if (signUpError) throw signUpError;
 
-          toast({
-            title: "Success",
-            description: "Please check your email to verify your account",
-          });
-        }
+        toast({
+          title: "Success",
+          description: "Please check your email to verify your account",
+        });
       } else {
+        // Sign in
         const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
           email,
           password,
@@ -115,11 +77,14 @@ const ProviderAuth = () => {
           throw new Error("No user data returned");
         }
 
-        const { data: profile } = await supabase
+        // Check if user is a provider
+        const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('role')
           .eq('id', signInData.user.id)
           .single();
+
+        if (profileError) throw profileError;
 
         if (profile?.role !== 'provider') {
           await supabase.auth.signOut();
@@ -136,9 +101,16 @@ const ProviderAuth = () => {
       console.error("Auth error:", error);
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || "An error occurred",
         variant: "destructive",
       });
+      if (error.message === "User already registered") {
+        toast({
+          title: "Info",
+          description: "Please sign in instead",
+        });
+        setIsSignUp(false);
+      }
     } finally {
       setIsLoading(false);
     }
