@@ -36,6 +36,9 @@ const ProviderDashboard = () => {
   }, []);
 
   const fetchCars = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
     const { data: cars, error } = await supabase
       .from("cars")
       .select(`
@@ -45,7 +48,8 @@ const ProviderDashboard = () => {
           end_date,
           is_available
         )
-      `);
+      `)
+      .eq('provider_id', user.id);
 
     if (error) {
       toast({
@@ -59,6 +63,9 @@ const ProviderDashboard = () => {
   };
 
   const handleAddCar = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
     const { data: carData, error: carError } = await supabase
       .from("cars")
       .insert({
@@ -67,7 +74,8 @@ const ProviderDashboard = () => {
         license_plate: newCar.license_plate,
         seats: parseInt(newCar.seats),
         rate_per_day: parseFloat(newCar.rate_per_day),
-        description: newCar.description
+        description: newCar.description,
+        provider_id: user.id
       })
       .select()
       .single();
@@ -96,23 +104,36 @@ const ProviderDashboard = () => {
   };
 
   const handleDeleteCar = async (carId: string) => {
-    const { error } = await supabase
-      .from("cars")
-      .delete()
-      .eq("id", carId);
+    try {
+      // First, delete related car_availability records
+      const { error: availabilityError } = await supabase
+        .from("car_availability")
+        .delete()
+        .eq("car_id", carId);
 
-    if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete car",
-        variant: "destructive",
-      });
-    } else {
+      if (availabilityError) throw availabilityError;
+
+      // Then, delete the car
+      const { error: carError } = await supabase
+        .from("cars")
+        .delete()
+        .eq("id", carId);
+
+      if (carError) throw carError;
+
       toast({
         title: "Success",
         description: "Car deleted successfully",
       });
-      await fetchCars();
+      
+      // Update the local state by removing the deleted car
+      setCars(cars.filter(car => car.id !== carId));
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete car",
+        variant: "destructive",
+      });
     }
   };
 
