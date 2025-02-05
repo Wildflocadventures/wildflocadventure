@@ -93,10 +93,8 @@ const CarDetails = () => {
         description: "Car booked successfully! Please proceed with the payment.",
       });
 
-      // Add a small delay before redirecting to make sure the user sees the success message
-      setTimeout(() => {
-        navigate("/customer/bookings");
-      }, 2000);
+      // Navigate to the bookings page after successful booking
+      navigate("/customer/bookings");
       
     } catch (error) {
       toast({
