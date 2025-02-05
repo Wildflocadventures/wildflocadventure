@@ -6,12 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Car, Upload } from "lucide-react";
+import { Car, Upload, Pencil, Trash2, ImagePlus } from "lucide-react";
 import { format } from "date-fns";
 
 const ProviderDashboard = () => {
   const { toast } = useToast();
   const [cars, setCars] = useState<any[]>([]);
+  const [editingCar, setEditingCar] = useState<any>(null);
   const [newCar, setNewCar] = useState({
     model: "",
     year: "",
@@ -20,6 +21,7 @@ const ProviderDashboard = () => {
     rate_per_day: "",
     description: ""
   });
+
   const [selectedDates, setSelectedDates] = useState<{
     from: Date | undefined;
     to: Date | undefined;
@@ -30,31 +32,31 @@ const ProviderDashboard = () => {
   const [selectedCarId, setSelectedCarId] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchCars = async () => {
-      const { data: cars, error } = await supabase
-        .from("cars")
-        .select(`
-          *,
-          car_availability (
-            start_date,
-            end_date,
-            is_available
-          )
-        `);
-
-      if (error) {
-        toast({
-          title: "Error",
-          description: "Failed to fetch cars",
-          variant: "destructive",
-        });
-      } else {
-        setCars(cars || []);
-      }
-    };
-
     fetchCars();
   }, []);
+
+  const fetchCars = async () => {
+    const { data: cars, error } = await supabase
+      .from("cars")
+      .select(`
+        *,
+        car_availability (
+          start_date,
+          end_date,
+          is_available
+        )
+      `);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch cars",
+        variant: "destructive",
+      });
+    } else {
+      setCars(cars || []);
+    }
+  };
 
   const handleAddCar = async () => {
     const { data: carData, error: carError } = await supabase
@@ -81,7 +83,7 @@ const ProviderDashboard = () => {
         title: "Success",
         description: "Car added successfully",
       });
-      setCars([...cars, carData]);
+      await fetchCars();
       setNewCar({
         model: "",
         year: "",
@@ -90,6 +92,58 @@ const ProviderDashboard = () => {
         rate_per_day: "",
         description: ""
       });
+    }
+  };
+
+  const handleDeleteCar = async (carId: string) => {
+    const { error } = await supabase
+      .from("cars")
+      .delete()
+      .eq("id", carId);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete car",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "Car deleted successfully",
+      });
+      await fetchCars();
+    }
+  };
+
+  const handleUpdateCar = async () => {
+    if (!editingCar) return;
+
+    const { error } = await supabase
+      .from("cars")
+      .update({
+        model: editingCar.model,
+        year: parseInt(editingCar.year),
+        license_plate: editingCar.license_plate,
+        seats: parseInt(editingCar.seats),
+        rate_per_day: parseFloat(editingCar.rate_per_day),
+        description: editingCar.description
+      })
+      .eq("id", editingCar.id);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update car",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "Car updated successfully",
+      });
+      await fetchCars();
+      setEditingCar(null);
     }
   };
 
@@ -118,21 +172,7 @@ const ProviderDashboard = () => {
 
       if (updateError) throw updateError;
 
-      // Refresh cars list
-      const { data: updatedCars } = await supabase
-        .from("cars")
-        .select(`
-          *,
-          car_availability (
-            start_date,
-            end_date,
-            is_available
-          )
-        `);
-      
-      if (updatedCars) {
-        setCars(updatedCars);
-      }
+      await fetchCars();
 
       toast({
         title: "Success",
@@ -174,22 +214,8 @@ const ProviderDashboard = () => {
         description: "Unavailability dates set successfully",
       });
 
-      // Refresh cars list
-      const { data: updatedCars } = await supabase
-        .from("cars")
-        .select(`
-          *,
-          car_availability (
-            start_date,
-            end_date,
-            is_available
-          )
-        `);
+      await fetchCars();
       
-      if (updatedCars) {
-        setCars(updatedCars);
-      }
-
       setSelectedCarId(null);
       setSelectedDates({ from: undefined, to: undefined });
     } catch (error: any) {
@@ -208,14 +234,16 @@ const ProviderDashboard = () => {
       <div className="grid md:grid-cols-2 gap-8">
         <Card>
           <CardHeader>
-            <CardTitle>Add New Car</CardTitle>
+            <CardTitle>{editingCar ? 'Edit Car' : 'Add New Car'}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label>Model</Label>
               <Input
-                value={newCar.model}
-                onChange={(e) => setNewCar({...newCar, model: e.target.value})}
+                value={editingCar ? editingCar.model : newCar.model}
+                onChange={(e) => editingCar 
+                  ? setEditingCar({...editingCar, model: e.target.value})
+                  : setNewCar({...newCar, model: e.target.value})}
                 placeholder="e.g. Toyota Camry"
               />
             </div>
@@ -223,16 +251,20 @@ const ProviderDashboard = () => {
               <Label>Year</Label>
               <Input
                 type="number"
-                value={newCar.year}
-                onChange={(e) => setNewCar({...newCar, year: e.target.value})}
+                value={editingCar ? editingCar.year : newCar.year}
+                onChange={(e) => editingCar
+                  ? setEditingCar({...editingCar, year: e.target.value})
+                  : setNewCar({...newCar, year: e.target.value})}
                 placeholder="e.g. 2020"
               />
             </div>
             <div className="space-y-2">
               <Label>License Plate</Label>
               <Input
-                value={newCar.license_plate}
-                onChange={(e) => setNewCar({...newCar, license_plate: e.target.value})}
+                value={editingCar ? editingCar.license_plate : newCar.license_plate}
+                onChange={(e) => editingCar
+                  ? setEditingCar({...editingCar, license_plate: e.target.value})
+                  : setNewCar({...newCar, license_plate: e.target.value})}
                 placeholder="e.g. ABC123"
               />
             </div>
@@ -240,8 +272,10 @@ const ProviderDashboard = () => {
               <Label>Number of Seats</Label>
               <Input
                 type="number"
-                value={newCar.seats}
-                onChange={(e) => setNewCar({...newCar, seats: e.target.value})}
+                value={editingCar ? editingCar.seats : newCar.seats}
+                onChange={(e) => editingCar
+                  ? setEditingCar({...editingCar, seats: e.target.value})
+                  : setNewCar({...newCar, seats: e.target.value})}
                 placeholder="e.g. 5"
               />
             </div>
@@ -249,26 +283,49 @@ const ProviderDashboard = () => {
               <Label>Rate per Day ($)</Label>
               <Input
                 type="number"
-                value={newCar.rate_per_day}
-                onChange={(e) => setNewCar({...newCar, rate_per_day: e.target.value})}
+                value={editingCar ? editingCar.rate_per_day : newCar.rate_per_day}
+                onChange={(e) => editingCar
+                  ? setEditingCar({...editingCar, rate_per_day: e.target.value})
+                  : setNewCar({...newCar, rate_per_day: e.target.value})}
                 placeholder="e.g. 50"
               />
             </div>
             <div className="space-y-2">
               <Label>Description</Label>
               <Input
-                value={newCar.description}
-                onChange={(e) => setNewCar({...newCar, description: e.target.value})}
+                value={editingCar ? editingCar.description : newCar.description}
+                onChange={(e) => editingCar
+                  ? setEditingCar({...editingCar, description: e.target.value})
+                  : setNewCar({...newCar, description: e.target.value})}
                 placeholder="Brief description of the car"
               />
             </div>
-            <Button 
-              onClick={handleAddCar}
-              className="w-full"
-              disabled={!newCar.model || !newCar.year || !newCar.license_plate || !newCar.seats || !newCar.rate_per_day}
-            >
-              Add Car
-            </Button>
+            {editingCar ? (
+              <div className="flex gap-2">
+                <Button 
+                  onClick={handleUpdateCar}
+                  className="flex-1"
+                  disabled={!editingCar.model || !editingCar.year || !editingCar.license_plate || !editingCar.seats || !editingCar.rate_per_day}
+                >
+                  Update Car
+                </Button>
+                <Button 
+                  onClick={() => setEditingCar(null)}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+              </div>
+            ) : (
+              <Button 
+                onClick={handleAddCar}
+                className="w-full"
+                disabled={!newCar.model || !newCar.year || !newCar.license_plate || !newCar.seats || !newCar.rate_per_day}
+              >
+                Add Car
+              </Button>
+            )}
           </CardContent>
         </Card>
 
@@ -323,7 +380,7 @@ const ProviderDashboard = () => {
           {cars.map((car) => (
             <Card key={car.id}>
               <CardContent className="p-6">
-                <div className="aspect-video mb-4 bg-gray-100 rounded-lg overflow-hidden">
+                <div className="relative aspect-video mb-4 bg-gray-100 rounded-lg overflow-hidden group">
                   {car.image_url ? (
                     <img
                       src={car.image_url}
@@ -335,6 +392,21 @@ const ProviderDashboard = () => {
                       <Car className="w-12 h-12 text-gray-400" />
                     </div>
                   )}
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <Label htmlFor={`image-${car.id}`} className="cursor-pointer">
+                      <div className="flex items-center gap-2 text-white hover:text-blue-200 transition-colors">
+                        <ImagePlus className="w-6 h-6" />
+                        <span>Upload Image</span>
+                      </div>
+                    </Label>
+                    <Input
+                      id={`image-${car.id}`}
+                      type="file"
+                      className="hidden"
+                      accept="image/*"
+                      onChange={(e) => handleImageUpload(e, car.id)}
+                    />
+                  </div>
                 </div>
                 <div className="space-y-4">
                   <div>
@@ -354,20 +426,25 @@ const ProviderDashboard = () => {
                       <p className="text-sm text-gray-600">{car.description}</p>
                     )}
                   </div>
-                  <div>
-                    <Label htmlFor={`image-${car.id}`} className="cursor-pointer">
-                      <div className="flex items-center gap-2 text-sm text-blue-600">
-                        <Upload className="w-4 h-4" />
-                        Upload Image
-                      </div>
-                    </Label>
-                    <Input
-                      id={`image-${car.id}`}
-                      type="file"
-                      className="hidden"
-                      accept="image/*"
-                      onChange={(e) => handleImageUpload(e, car.id)}
-                    />
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => setEditingCar(car)}
+                    >
+                      <Pencil className="w-4 h-4 mr-2" />
+                      Edit
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => handleDeleteCar(car.id)}
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete
+                    </Button>
                   </div>
                   {car.car_availability && car.car_availability.length > 0 && (
                     <div>
