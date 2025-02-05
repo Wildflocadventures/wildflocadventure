@@ -69,7 +69,7 @@ export const AuthButtons = ({ session, userProfile, onLogout }: AuthButtonsProps
       <div className="absolute top-4 right-4 flex gap-4">
         <Button 
           variant="outline"
-          className="bg-white/90 backdrop-blur-sm hover:bg-white/70 transition-all"
+          className="bg-white/90 hover:bg-white/70 transition-all"
           onClick={handleCustomerLogin}
         >
           <User className="w-4 h-4 mr-2" />
