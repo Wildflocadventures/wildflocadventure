@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,7 +10,6 @@ import { Car, Upload } from "lucide-react";
 import { format } from "date-fns";
 
 const ProviderDashboard = () => {
-  const navigate = useNavigate();
   const { toast } = useToast();
   const [cars, setCars] = useState<any[]>([]);
   const [newCar, setNewCar] = useState({
@@ -33,12 +31,6 @@ const ProviderDashboard = () => {
 
   useEffect(() => {
     const fetchCars = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        navigate("/provider/auth");
-        return;
-      }
-
       const { data: cars, error } = await supabase
         .from("cars")
         .select(`
@@ -48,13 +40,12 @@ const ProviderDashboard = () => {
             end_date,
             is_available
           )
-        `)
-        .eq("provider_id", user.id);
+        `);
 
       if (error) {
         toast({
           title: "Error",
-          description: "Failed to fetch your cars",
+          description: "Failed to fetch cars",
           variant: "destructive",
         });
       } else {
@@ -66,13 +57,9 @@ const ProviderDashboard = () => {
   }, []);
 
   const handleAddCar = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
     const { data: carData, error: carError } = await supabase
       .from("cars")
       .insert({
-        provider_id: user.id,
         model: newCar.model,
         year: parseInt(newCar.year),
         license_plate: newCar.license_plate,
@@ -132,7 +119,6 @@ const ProviderDashboard = () => {
       if (updateError) throw updateError;
 
       // Refresh cars list
-      const { data: { user } } = await supabase.auth.getUser();
       const { data: updatedCars } = await supabase
         .from("cars")
         .select(`
@@ -142,8 +128,7 @@ const ProviderDashboard = () => {
             end_date,
             is_available
           )
-        `)
-        .eq("provider_id", user?.id);
+        `);
       
       if (updatedCars) {
         setCars(updatedCars);
@@ -190,7 +175,6 @@ const ProviderDashboard = () => {
       });
 
       // Refresh cars list
-      const { data: { user } } = await supabase.auth.getUser();
       const { data: updatedCars } = await supabase
         .from("cars")
         .select(`
@@ -200,8 +184,7 @@ const ProviderDashboard = () => {
             end_date,
             is_available
           )
-        `)
-        .eq("provider_id", user?.id);
+        `);
       
       if (updatedCars) {
         setCars(updatedCars);
