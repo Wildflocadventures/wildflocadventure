@@ -100,7 +100,7 @@ export type Database = {
           image_url: string | null
           license_plate: string
           model: string
-          provider_id: string
+          provider_id: string | null
           rate_per_day: number
           seats: number
           year: number
@@ -112,7 +112,7 @@ export type Database = {
           image_url?: string | null
           license_plate: string
           model: string
-          provider_id: string
+          provider_id?: string | null
           rate_per_day: number
           seats: number
           year: number
@@ -124,7 +124,7 @@ export type Database = {
           image_url?: string | null
           license_plate?: string
           model?: string
-          provider_id?: string
+          provider_id?: string | null
           rate_per_day?: number
           seats?: number
           year?: number

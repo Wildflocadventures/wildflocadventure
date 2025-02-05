@@ -17,16 +17,12 @@ export const Navbar = ({ session, userProfile }: NavbarProps) => {
     navigate("/auth");
   };
 
-  const handleProviderLogin = () => {
-    navigate("/provider/auth");
+  const handleProviderDashboard = () => {
+    navigate("/provider/dashboard");
   };
 
   const handleSignup = () => {
     navigate("/auth");
-  };
-
-  const handleProviderDashboard = () => {
-    navigate("/provider/dashboard");
   };
 
   const handleLogout = async () => {
@@ -70,11 +66,11 @@ export const Navbar = ({ session, userProfile }: NavbarProps) => {
                 </Button>
                 <Button
                   variant="outline"
-                  onClick={handleProviderLogin}
+                  onClick={handleProviderDashboard}
                   className="flex items-center gap-2"
                 >
                   <Car className="w-4 h-4" />
-                  Provider Login
+                  Provider Dashboard
                 </Button>
                 <Button
                   onClick={handleSignup}
