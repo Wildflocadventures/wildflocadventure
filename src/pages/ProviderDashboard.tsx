@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Card } from "@/components/ui/card";
@@ -56,19 +57,25 @@ const ProviderDashboard = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { error: carError } = await supabase
-      .from("cars")
-      .insert({
-        ...carData,
-        provider_id: user.id
-      })
-      .select()
-      .single();
+    // Parse numeric values before sending to Supabase
+    const parsedCarData = {
+      model: carData.model,
+      year: parseInt(carData.year),
+      license_plate: carData.license_plate,
+      seats: parseInt(carData.seats),
+      rate_per_day: parseFloat(carData.rate_per_day),
+      description: carData.description,
+      provider_id: user.id
+    };
 
-    if (carError) {
+    const { error } = await supabase
+      .from("cars")
+      .insert(parsedCarData);
+
+    if (error) {
       toast({
         title: "Error",
-        description: carError.message,
+        description: error.message,
         variant: "destructive",
       });
     } else {
