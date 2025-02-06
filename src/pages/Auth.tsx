@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -15,6 +17,7 @@ const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [role, setRole] = useState<"customer" | "provider">("customer");
 
   const validateForm = (isSignUp = false) => {
     if (!email || !password) {
@@ -56,6 +59,7 @@ const Auth = () => {
         options: {
           data: {
             full_name: fullName,
+            role: role,
           },
         },
       });
@@ -208,6 +212,23 @@ const Auth = () => {
                     required
                     className="bg-white"
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label>Account Type</Label>
+                  <RadioGroup
+                    value={role}
+                    onValueChange={(value) => setRole(value as "customer" | "provider")}
+                    className="grid grid-cols-2 gap-4"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="customer" id="customer" />
+                      <Label htmlFor="customer">Customer</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="provider" id="provider" />
+                      <Label htmlFor="provider">Service Provider</Label>
+                    </div>
+                  </RadioGroup>
                 </div>
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? "Creating account..." : "Create Account"}
