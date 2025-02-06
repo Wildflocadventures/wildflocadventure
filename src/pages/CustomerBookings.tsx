@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -111,7 +112,7 @@ const CustomerBookings = () => {
                         {booking.cars.model} ({booking.cars.year})
                       </h3>
                       <p className="text-sm text-gray-500">
-                        Host: {booking.cars.profiles.full_name}
+                        Host: {booking.cars.profiles?.full_name || 'Unknown Host'}
                       </p>
                     </div>
                     <div className="text-right">
