@@ -5,8 +5,19 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { LogOut, Calendar, Car, DollarSign } from "lucide-react";
+import { LogOut, Calendar, Car, DollarSign, Trash2 } from "lucide-react";
 import { format } from "date-fns";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const CustomerBookings = () => {
   const navigate = useNavigate();
@@ -51,6 +62,27 @@ const CustomerBookings = () => {
       });
     } else {
       setBookings(data || []);
+    }
+  };
+
+  const handleDeleteBooking = async (bookingId: string) => {
+    const { error } = await supabase
+      .from('bookings')
+      .delete()
+      .eq('id', bookingId);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete booking",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "Booking deleted successfully",
+      });
+      fetchBookings();
     }
   };
 
@@ -145,9 +177,35 @@ const CustomerBookings = () => {
                     <p className="text-sm">
                       License Plate: <span className="font-medium">{booking.cars.license_plate}</span>
                     </p>
-                    <span className="px-3 py-1 text-sm rounded-full bg-blue-100 text-blue-800">
-                      {booking.status}
-                    </span>
+                    <div className="flex items-center gap-4">
+                      <span className="px-3 py-1 text-sm rounded-full bg-blue-100 text-blue-800">
+                        {booking.status}
+                      </span>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="outline" size="icon" className="text-red-600 hover:text-red-700">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Cancel Booking</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to cancel this booking? This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleDeleteBooking(booking.id)}
+                              className="bg-red-600 hover:bg-red-700"
+                            >
+                              Delete Booking
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   </div>
                 </div>
               </div>

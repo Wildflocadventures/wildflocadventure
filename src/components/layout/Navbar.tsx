@@ -1,6 +1,7 @@
+
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { LogIn, UserPlus, LogOut, Car } from "lucide-react";
+import { LogIn, UserPlus, LogOut, Car, List } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -82,7 +83,7 @@ export const Navbar = ({ session, userProfile }: NavbarProps) => {
               </>
             ) : (
               <>
-                {userProfile?.role === 'provider' && (
+                {userProfile?.role === 'provider' ? (
                   <Button
                     variant="outline"
                     onClick={handleProviderDashboard}
@@ -90,6 +91,15 @@ export const Navbar = ({ session, userProfile }: NavbarProps) => {
                   >
                     <Car className="w-4 h-4" />
                     Dashboard
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    onClick={() => navigate('/customer/bookings')}
+                    className="flex items-center gap-2"
+                  >
+                    <List className="w-4 h-4" />
+                    My Bookings
                   </Button>
                 )}
                 <Button
