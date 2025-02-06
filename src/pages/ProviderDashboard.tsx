@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
@@ -6,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Car, Upload, Pencil, Trash2, ImagePlus } from "lucide-react";
+import { Car, Upload, Pencil, ImagePlus } from "lucide-react";
 import { format } from "date-fns";
 
 const ProviderDashboard = () => {
@@ -92,27 +93,6 @@ const ProviderDashboard = () => {
         rate_per_day: "",
         description: ""
       });
-    }
-  };
-
-  const handleDeleteCar = async (carId: string) => {
-    const { error } = await supabase
-      .from("cars")
-      .delete()
-      .eq("id", carId);
-
-    if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete car",
-        variant: "destructive",
-      });
-    } else {
-      toast({
-        title: "Success",
-        description: "Car deleted successfully",
-      });
-      await fetchCars();
     }
   };
 
@@ -430,20 +410,11 @@ const ProviderDashboard = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="flex-1"
+                      className="w-full"
                       onClick={() => setEditingCar(car)}
                     >
                       <Pencil className="w-4 h-4 mr-2" />
                       Edit
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      className="flex-1"
-                      onClick={() => handleDeleteCar(car.id)}
-                    >
-                      <Trash2 className="w-4 h-4 mr-2" />
-                      Delete
                     </Button>
                   </div>
                   {car.car_availability && car.car_availability.length > 0 && (
@@ -471,3 +442,4 @@ const ProviderDashboard = () => {
 };
 
 export default ProviderDashboard;
+
