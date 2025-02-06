@@ -1,18 +1,27 @@
-
 import { useState, useEffect } from "react";
 import { Calendar } from "@/components/ui/calendar";
-import { Card } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { CarForm } from "@/components/provider/CarForm";
-import { CarList } from "@/components/provider/CarList";
+import { Car, Upload, Pencil, Trash2, ImagePlus } from "lucide-react";
+import { format } from "date-fns";
 
 const ProviderDashboard = () => {
   const { toast } = useToast();
   const [cars, setCars] = useState<any[]>([]);
   const [editingCar, setEditingCar] = useState<any>(null);
+  const [newCar, setNewCar] = useState({
+    model: "",
+    year: "",
+    license_plate: "",
+    seats: "",
+    rate_per_day: "",
+    description: ""
+  });
+
   const [selectedDates, setSelectedDates] = useState<{
     from: Date | undefined;
     to: Date | undefined;
@@ -53,29 +62,28 @@ const ProviderDashboard = () => {
     }
   };
 
-  const handleAddCar = async (carData: any) => {
+  const handleAddCar = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // Parse numeric values before sending to Supabase
-    const parsedCarData = {
-      model: carData.model,
-      year: parseInt(carData.year),
-      license_plate: carData.license_plate,
-      seats: parseInt(carData.seats),
-      rate_per_day: parseFloat(carData.rate_per_day),
-      description: carData.description,
-      provider_id: user.id
-    };
-
-    const { error } = await supabase
+    const { data: carData, error: carError } = await supabase
       .from("cars")
-      .insert(parsedCarData);
+      .insert({
+        model: newCar.model,
+        year: parseInt(newCar.year),
+        license_plate: newCar.license_plate,
+        seats: parseInt(newCar.seats),
+        rate_per_day: parseFloat(newCar.rate_per_day),
+        description: newCar.description,
+        provider_id: user.id
+      })
+      .select()
+      .single();
 
-    if (error) {
+    if (carError) {
       toast({
         title: "Error",
-        description: error.message,
+        description: carError.message,
         variant: "destructive",
       });
     } else {
@@ -84,19 +92,63 @@ const ProviderDashboard = () => {
         description: "Car added successfully",
       });
       await fetchCars();
+      setNewCar({
+        model: "",
+        year: "",
+        license_plate: "",
+        seats: "",
+        rate_per_day: "",
+        description: ""
+      });
     }
   };
 
-  const handleUpdateCar = async (carData: any) => {
+  const handleDeleteCar = async (carId: string) => {
+    try {
+      // First, delete related car_availability records
+      const { error: availabilityError } = await supabase
+        .from("car_availability")
+        .delete()
+        .eq("car_id", carId);
+
+      if (availabilityError) throw availabilityError;
+
+      // Then, delete the car
+      const { error: carError } = await supabase
+        .from("cars")
+        .delete()
+        .eq("id", carId);
+
+      if (carError) throw carError;
+
+      toast({
+        title: "Success",
+        description: "Car deleted successfully",
+      });
+      
+      // Update the local state by removing the deleted car
+      setCars(cars.filter(car => car.id !== carId));
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete car",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleUpdateCar = async () => {
+    if (!editingCar) return;
+
     const { error } = await supabase
       .from("cars")
       .update({
-        model: carData.model,
-        year: parseInt(carData.year),
-        license_plate: carData.license_plate,
-        seats: parseInt(carData.seats),
-        rate_per_day: parseFloat(carData.rate_per_day),
-        description: carData.description
+        model: editingCar.model,
+        year: parseInt(editingCar.year),
+        license_plate: editingCar.license_plate,
+        seats: parseInt(editingCar.seats),
+        rate_per_day: parseFloat(editingCar.rate_per_day),
+        description: editingCar.description
       })
       .eq("id", editingCar.id);
 
@@ -113,47 +165,6 @@ const ProviderDashboard = () => {
       });
       await fetchCars();
       setEditingCar(null);
-    }
-  };
-
-  const handleDeleteCar = async (carId: string) => {
-    try {
-      // First, delete related car_availability records
-      const { error: availabilityError } = await supabase
-        .from("car_availability")
-        .delete()
-        .eq("car_id", carId);
-
-      if (availabilityError) throw availabilityError;
-
-      // Then, delete bookings related to the car
-      const { error: bookingsError } = await supabase
-        .from("bookings")
-        .delete()
-        .eq("car_id", carId);
-
-      if (bookingsError) throw bookingsError;
-
-      // Finally, delete the car
-      const { error: carError } = await supabase
-        .from("cars")
-        .delete()
-        .eq("id", carId);
-
-      if (carError) throw carError;
-
-      toast({
-        title: "Success",
-        description: "Car deleted successfully",
-      });
-      
-      setCars(cars.filter(car => car.id !== carId));
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to delete car",
-        variant: "destructive",
-      });
     }
   };
 
@@ -243,16 +254,107 @@ const ProviderDashboard = () => {
       
       <div className="grid md:grid-cols-2 gap-8">
         <Card>
-          <CarForm
-            editingCar={editingCar}
-            onSubmit={editingCar ? handleUpdateCar : handleAddCar}
-            onCancel={() => setEditingCar(null)}
-          />
+          <CardHeader>
+            <CardTitle>{editingCar ? 'Edit Car' : 'Add New Car'}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label>Model</Label>
+              <Input
+                value={editingCar ? editingCar.model : newCar.model}
+                onChange={(e) => editingCar 
+                  ? setEditingCar({...editingCar, model: e.target.value})
+                  : setNewCar({...newCar, model: e.target.value})}
+                placeholder="e.g. Toyota Camry"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Year</Label>
+              <Input
+                type="number"
+                value={editingCar ? editingCar.year : newCar.year}
+                onChange={(e) => editingCar
+                  ? setEditingCar({...editingCar, year: e.target.value})
+                  : setNewCar({...newCar, year: e.target.value})}
+                placeholder="e.g. 2020"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>License Plate</Label>
+              <Input
+                value={editingCar ? editingCar.license_plate : newCar.license_plate}
+                onChange={(e) => editingCar
+                  ? setEditingCar({...editingCar, license_plate: e.target.value})
+                  : setNewCar({...newCar, license_plate: e.target.value})}
+                placeholder="e.g. ABC123"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Number of Seats</Label>
+              <Input
+                type="number"
+                value={editingCar ? editingCar.seats : newCar.seats}
+                onChange={(e) => editingCar
+                  ? setEditingCar({...editingCar, seats: e.target.value})
+                  : setNewCar({...newCar, seats: e.target.value})}
+                placeholder="e.g. 5"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Rate per Day ($)</Label>
+              <Input
+                type="number"
+                value={editingCar ? editingCar.rate_per_day : newCar.rate_per_day}
+                onChange={(e) => editingCar
+                  ? setEditingCar({...editingCar, rate_per_day: e.target.value})
+                  : setNewCar({...newCar, rate_per_day: e.target.value})}
+                placeholder="e.g. 50"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Description</Label>
+              <Input
+                value={editingCar ? editingCar.description : newCar.description}
+                onChange={(e) => editingCar
+                  ? setEditingCar({...editingCar, description: e.target.value})
+                  : setNewCar({...newCar, description: e.target.value})}
+                placeholder="Brief description of the car"
+              />
+            </div>
+            {editingCar ? (
+              <div className="flex gap-2">
+                <Button 
+                  onClick={handleUpdateCar}
+                  className="flex-1"
+                  disabled={!editingCar.model || !editingCar.year || !editingCar.license_plate || !editingCar.seats || !editingCar.rate_per_day}
+                >
+                  Update Car
+                </Button>
+                <Button 
+                  onClick={() => setEditingCar(null)}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+              </div>
+            ) : (
+              <Button 
+                onClick={handleAddCar}
+                className="w-full"
+                disabled={!newCar.model || !newCar.year || !newCar.license_plate || !newCar.seats || !newCar.rate_per_day}
+              >
+                Add Car
+              </Button>
+            )}
+          </CardContent>
         </Card>
 
         <Card>
-          <div className="p-6 space-y-4">
-            <h2 className="text-xl font-bold">Set Car Unavailability</h2>
+          <CardHeader>
+            <CardTitle>Set Car Unavailability</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label>Select Car</Label>
               <select
@@ -289,18 +391,101 @@ const ProviderDashboard = () => {
             >
               Set Unavailability
             </Button>
-          </div>
+          </CardContent>
         </Card>
       </div>
 
       <div className="mt-8">
         <h2 className="text-2xl font-bold mb-4">Your Cars</h2>
-        <CarList
-          cars={cars}
-          onEdit={setEditingCar}
-          onDelete={handleDeleteCar}
-          onImageUpload={handleImageUpload}
-        />
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {cars.map((car) => (
+            <Card key={car.id}>
+              <CardContent className="p-6">
+                <div className="relative aspect-video mb-4 bg-gray-100 rounded-lg overflow-hidden group">
+                  {car.image_url ? (
+                    <img
+                      src={car.image_url}
+                      alt={car.model}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Car className="w-12 h-12 text-gray-400" />
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <Label htmlFor={`image-${car.id}`} className="cursor-pointer">
+                      <div className="flex items-center gap-2 text-white hover:text-blue-200 transition-colors">
+                        <ImagePlus className="w-6 h-6" />
+                        <span>Upload Image</span>
+                      </div>
+                    </Label>
+                    <Input
+                      id={`image-${car.id}`}
+                      type="file"
+                      className="hidden"
+                      accept="image/*"
+                      onChange={(e) => handleImageUpload(e, car.id)}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="font-medium">{car.model}</h3>
+                    <p className="text-sm text-gray-500">
+                      {car.year} • {car.license_plate}
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-sm">
+                      <span className="font-medium">Rate:</span> ${car.rate_per_day}/day
+                    </p>
+                    <p className="text-sm">
+                      <span className="font-medium">Seats:</span> {car.seats}
+                    </p>
+                    {car.description && (
+                      <p className="text-sm text-gray-600">{car.description}</p>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => setEditingCar(car)}
+                    >
+                      <Pencil className="w-4 h-4 mr-2" />
+                      Edit
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => handleDeleteCar(car.id)}
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete
+                    </Button>
+                  </div>
+                  {car.car_availability && car.car_availability.length > 0 && (
+                    <div>
+                      <h4 className="font-medium text-sm mb-2">Unavailable Dates:</h4>
+                      <ul className="text-sm text-red-600 space-y-1">
+                        {car.car_availability
+                          .filter((availability: any) => !availability.is_available)
+                          .map((availability: any, index: number) => (
+                          <li key={index}>
+                            {format(new Date(availability.start_date), "MMM d, yyyy")} - {format(new Date(availability.end_date), "MMM d, yyyy")}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     </div>
   );
