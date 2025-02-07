@@ -1,3 +1,4 @@
+
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -50,11 +51,39 @@ const CarDetails = () => {
     retry: false
   });
 
+  const isCarAvailable = () => {
+    if (!selectedDates.from || !selectedDates.to || !car?.car_availability) return true;
+    
+    const hasUnavailabilityConflict = car.car_availability.some((availability) => {
+      if (availability.is_available) return false;
+      
+      const availStart = new Date(availability.start_date);
+      const availEnd = new Date(availability.end_date);
+      
+      return (
+        (selectedDates.from <= availEnd && selectedDates.to >= availStart) ||
+        (selectedDates.from >= availStart && selectedDates.from <= availEnd) ||
+        (selectedDates.to >= availStart && selectedDates.to <= availEnd)
+      );
+    });
+
+    return !hasUnavailabilityConflict;
+  };
+
   const handleBooking = async () => {
     if (!selectedDates.from || !selectedDates.to) {
       toast({
         title: "Error",
         description: "Please select booking dates",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!isCarAvailable()) {
+      toast({
+        title: "Error",
+        description: "The car is not available for the selected dates",
         variant: "destructive",
       });
       return;
@@ -239,9 +268,15 @@ const CarDetails = () => {
                 dateRange={selectedDates}
                 onDateRangeChange={setSelectedDates}
               />
+              {!isCarAvailable() && (
+                <p className="text-red-600 text-sm">
+                  This car is not available for the selected dates. Please choose different dates.
+                </p>
+              )}
               <Button 
                 className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-300"
                 onClick={handleBooking}
+                disabled={!isCarAvailable()}
               >
                 Continue to Book
               </Button>
