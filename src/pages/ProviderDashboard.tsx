@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
@@ -178,7 +177,17 @@ const ProviderDashboard = () => {
     }
 
     try {
-      const { error } = await supabase
+      // First, delete all existing unavailability records for this car
+      const { error: deleteError } = await supabase
+        .from("car_availability")
+        .delete()
+        .eq("car_id", selectedCarId)
+        .eq("is_available", false);
+
+      if (deleteError) throw deleteError;
+
+      // Then, insert the new unavailability record
+      const { error: insertError } = await supabase
         .from("car_availability")
         .insert({
           car_id: selectedCarId,
@@ -187,11 +196,11 @@ const ProviderDashboard = () => {
           is_available: false
         });
 
-      if (error) throw error;
+      if (insertError) throw insertError;
 
       toast({
         title: "Success",
-        description: "Unavailability dates set successfully",
+        description: "Unavailability dates updated successfully",
       });
 
       await fetchCars();
@@ -442,4 +451,3 @@ const ProviderDashboard = () => {
 };
 
 export default ProviderDashboard;
-
