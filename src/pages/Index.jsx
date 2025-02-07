@@ -1,67 +1,19 @@
-import { useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { format } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
 import { AuthButtons } from "@/components/car-listing/AuthButtons";
-import { CarCard } from "@/components/car-listing/CarCard";
-import { SearchForm } from "@/components/car-listing/SearchForm";
+import { HeroSection } from "@/components/car-listing/HeroSection";
+import { CarListings } from "@/components/car-listing/CarListings";
+import { useAuthProfile } from "@/hooks/useAuthProfile";
 
 const Index = () => {
-  const navigate = useNavigate();
-  const [session, setSession] = useState(null);
-  const [userProfile, setUserProfile] = useState(null);
-  const { toast } = useToast();
+  const { session, userProfile, handleLogout } = useAuthProfile();
   const [selectedDates, setSelectedDates] = useState({
     from: undefined,
     to: undefined,
   });
   const [location, setLocation] = useState("");
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (session?.user?.id) {
-        fetchUserProfile(session.user.id);
-      }
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (session?.user?.id) {
-        fetchUserProfile(session.user.id);
-      } else {
-        setUserProfile(null);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const fetchUserProfile = async (userId) => {
-    try {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", userId)
-        .single();
-
-      if (error) {
-        console.error("Error fetching user profile:", error);
-        return;
-      }
-
-      if (data) {
-        console.log("User profile:", data);
-        setUserProfile(data);
-      }
-    } catch (error) {
-      console.error("Error in fetchUserProfile:", error);
-    }
-  };
 
   const { data: cars, isLoading: carsLoading } = useQuery({
     queryKey: ["cars", selectedDates],
@@ -88,61 +40,6 @@ const Index = () => {
     },
   });
 
-  const handleLogout = async () => {
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        console.error("Error logging out:", error);
-        toast({
-          title: "Error",
-          description: "Failed to log out",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Success",
-          description: "Logged out successfully",
-        });
-        setSession(null);
-        setUserProfile(null);
-        navigate('/');
-      }
-    } catch (error) {
-      console.error("Error in logout handler:", error);
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const isCarAvailable = (car) => {
-    if (!selectedDates.from || !selectedDates.to || !car?.car_availability) return true;
-    
-    const hasUnavailabilityConflict = car.car_availability.some((availability) => {
-      if (availability.is_available) return false;
-      
-      const availStart = new Date(availability.start_date);
-      const availEnd = new Date(availability.end_date);
-      
-      return (
-        (selectedDates.from <= availEnd && selectedDates.to >= availStart) ||
-        (selectedDates.from >= availStart && selectedDates.from <= availEnd) ||
-        (selectedDates.to >= availStart && selectedDates.to <= availEnd)
-      );
-    });
-
-    return !hasUnavailabilityConflict;
-  };
-
-  const formatDateRange = () => {
-    if (selectedDates.from && selectedDates.to) {
-      return `${format(selectedDates.from, 'MMM d')} - ${format(selectedDates.to, 'MMM d')}`;
-    }
-    return null;
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white relative">
       <AuthButtons 
@@ -151,50 +48,18 @@ const Index = () => {
         onLogout={handleLogout}
       />
       
-      <div className="relative py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
-        <div className="absolute inset-0 bg-black/20 backdrop-blur-sm"></div>
-        <div className="relative max-w-7xl mx-auto">
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold mb-8 text-center">
-            Wildfloc Adventures
-          </h1>
-          
-          <SearchForm
-            location={location}
-            setLocation={setLocation}
-            selectedDates={selectedDates}
-            setSelectedDates={setSelectedDates}
-          />
-        </div>
-      </div>
+      <HeroSection
+        location={location}
+        setLocation={setLocation}
+        selectedDates={selectedDates}
+        setSelectedDates={setSelectedDates}
+      />
 
-      <div className="container mx-auto px-4 py-16">
-        <div className="flex justify-between items-center mb-8">
-          <h2 className="text-2xl font-bold">Available Cars</h2>
-          {formatDateRange() && (
-            <span className="text-gray-600">{formatDateRange()}</span>
-          )}
-        </div>
-        
-        {carsLoading ? (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="animate-pulse">
-                <div className="h-48 bg-gray-200 rounded-t-lg" />
-                <div className="p-4 space-y-2">
-                  <div className="h-4 bg-gray-200 rounded w-3/4" />
-                  <div className="h-4 bg-gray-200 rounded w-1/2" />
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {cars?.filter(isCarAvailable).map((car) => (
-              <CarCard key={car.id} car={car} />
-            ))}
-          </div>
-        )}
-      </div>
+      <CarListings
+        cars={cars}
+        carsLoading={carsLoading}
+        selectedDates={selectedDates}
+      />
     </div>
   );
 };
