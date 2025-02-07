@@ -1,4 +1,3 @@
-
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -277,9 +276,8 @@ const CarDetails = () => {
                 className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-300"
                 onClick={handleBooking}
                 disabled={!isCarAvailable()}
-                Book Now
               >
-                Continue to Book
+                Book Now
               </Button>
             </CardContent>
           </Card>
