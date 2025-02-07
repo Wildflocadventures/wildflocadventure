@@ -105,14 +105,14 @@ const CustomerBookings = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white p-8">
+    <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900">My Bookings</h1>
           <Button 
             variant="outline"
             onClick={handleLogout}
-            className="bg-white"
+            className="bg-white text-gray-800 hover:bg-gray-100"
           >
             <LogOut className="w-4 h-4 mr-2" />
             Logout
@@ -121,7 +121,7 @@ const CustomerBookings = () => {
 
         <div className="grid gap-6">
           {bookings.map((booking) => (
-            <Card key={booking.id} className="p-6 bg-white">
+            <Card key={booking.id} className="p-6 bg-white shadow-md">
               <div className="flex flex-col md:flex-row gap-6">
                 <div className="w-full md:w-1/3">
                   {booking.cars.image_url ? (
@@ -143,7 +143,7 @@ const CustomerBookings = () => {
                       <h3 className="text-xl font-bold text-gray-900">
                         {booking.cars.model} ({booking.cars.year})
                       </h3>
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-gray-600">
                         Host: {booking.cars.profiles?.full_name || 'Unknown Host'}
                       </p>
                     </div>
@@ -152,29 +152,29 @@ const CustomerBookings = () => {
                         <DollarSign className="h-5 w-5" />
                         <span className="text-xl font-bold">{booking.total_amount}</span>
                       </div>
-                      <p className="text-sm text-gray-500">Total Amount</p>
+                      <p className="text-sm text-gray-600">Total Amount</p>
                     </div>
                   </div>
                   
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
-                      <p className="text-sm text-gray-500">Start Date</p>
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-gray-400" />
+                      <p className="text-sm text-gray-600">Start Date</p>
+                      <div className="flex items-center gap-2 text-gray-800">
+                        <Calendar className="h-4 w-4 text-gray-500" />
                         <span>{format(new Date(booking.start_date), "LLL dd, y")}</span>
                       </div>
                     </div>
                     <div className="space-y-1">
-                      <p className="text-sm text-gray-500">End Date</p>
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-gray-400" />
+                      <p className="text-sm text-gray-600">End Date</p>
+                      <div className="flex items-center gap-2 text-gray-800">
+                        <Calendar className="h-4 w-4 text-gray-500" />
                         <span>{format(new Date(booking.end_date), "LLL dd, y")}</span>
                       </div>
                     </div>
                   </div>
                   
-                  <div className="flex items-center justify-between pt-4 border-t">
-                    <p className="text-sm">
+                  <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                    <p className="text-sm text-gray-700">
                       License Plate: <span className="font-medium">{booking.cars.license_plate}</span>
                     </p>
                     <div className="flex items-center gap-4">
@@ -183,14 +183,14 @@ const CustomerBookings = () => {
                       </span>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button variant="outline" size="icon" className="text-red-600 hover:text-red-700">
+                          <Button variant="outline" size="icon" className="text-red-600 hover:text-red-700 hover:bg-red-50">
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                           <AlertDialogHeader>
                             <AlertDialogTitle>Cancel Booking</AlertDialogTitle>
-                            <AlertDialogDescription>
+                            <AlertDialogDescription className="text-gray-600">
                               Are you sure you want to cancel this booking? This action cannot be undone.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
@@ -198,7 +198,7 @@ const CustomerBookings = () => {
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
                             <AlertDialogAction
                               onClick={() => handleDeleteBooking(booking.id)}
-                              className="bg-red-600 hover:bg-red-700"
+                              className="bg-red-600 hover:bg-red-700 text-white"
                             >
                               Delete Booking
                             </AlertDialogAction>
@@ -213,12 +213,12 @@ const CustomerBookings = () => {
           ))}
           
           {bookings.length === 0 && (
-            <Card className="p-12 text-center bg-white">
+            <Card className="p-12 text-center bg-white shadow-md">
               <Car className="h-16 w-16 mx-auto text-gray-400 mb-4" />
               <h3 className="text-xl font-medium text-gray-900 mb-2">No Bookings Found</h3>
-              <p className="text-gray-500">You haven't made any bookings yet.</p>
+              <p className="text-gray-600">You haven't made any bookings yet.</p>
               <Button 
-                className="mt-6"
+                className="mt-6 bg-blue-600 hover:bg-blue-700 text-white"
                 onClick={() => navigate('/')}
               >
                 Browse Cars
