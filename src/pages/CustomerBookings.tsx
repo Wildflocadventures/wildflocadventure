@@ -1,11 +1,10 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { LogOut, Calendar, Car, DollarSign, Trash2 } from "lucide-react";
+import { LogOut, Calendar, Car, IndianRupee, Trash2, CreditCard } from "lucide-react";
 import { format } from "date-fns";
 import {
   AlertDialog,
@@ -86,6 +85,29 @@ const CustomerBookings = () => {
     }
   };
 
+  const handlePayment = async (bookingId: string) => {
+    const { data, error } = await supabase
+      .from('bookings')
+      .update({ status: 'confirmed' })
+      .eq('id', bookingId)
+      .select()
+      .single();
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to process payment",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "Your booking has been confirmed!",
+      });
+      fetchBookings();
+    }
+  };
+
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
@@ -149,7 +171,7 @@ const CustomerBookings = () => {
                     </div>
                     <div className="text-right">
                       <div className="flex items-center gap-1 text-green-600">
-                        <DollarSign className="h-5 w-5" />
+                        <IndianRupee className="h-5 w-5" />
                         <span className="text-xl font-bold">{booking.total_amount}</span>
                       </div>
                       <p className="text-sm text-gray-600">Total Amount</p>
@@ -178,9 +200,19 @@ const CustomerBookings = () => {
                       License Plate: <span className="font-medium">{booking.cars.license_plate}</span>
                     </p>
                     <div className="flex items-center gap-4">
-                      <span className="px-3 py-1 text-sm rounded-full bg-blue-100 text-blue-800">
-                        {booking.status}
-                      </span>
+                      {booking.status === 'pending' ? (
+                        <Button
+                          onClick={() => handlePayment(booking.id)}
+                          className="bg-green-600 hover:bg-green-700 text-white"
+                        >
+                          <CreditCard className="h-4 w-4 mr-2" />
+                          Complete Payment
+                        </Button>
+                      ) : (
+                        <span className="px-3 py-1 text-sm rounded-full bg-green-100 text-green-800">
+                          {booking.status}
+                        </span>
+                      )}
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button variant="outline" size="icon" className="text-red-600 hover:text-red-700 hover:bg-red-50">
