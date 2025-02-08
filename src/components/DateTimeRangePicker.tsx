@@ -1,3 +1,4 @@
+
 import * as React from "react";
 import { format } from "date-fns";
 import { Calendar as CalendarIcon, Clock } from "lucide-react";
@@ -31,6 +32,8 @@ export function DateTimeRangePicker({
 }: DateTimeRangePickerProps) {
   const [startTime, setStartTime] = React.useState("10:00");
   const [endTime, setEndTime] = React.useState("10:00");
+  const [tempDateRange, setTempDateRange] = React.useState(dateRange);
+  const [open, setOpen] = React.useState(false);
 
   const timeOptions = Array.from({ length: 24 * 2 }, (_, i) => {
     const hour = Math.floor(i / 2);
@@ -43,9 +46,14 @@ export function DateTimeRangePicker({
     return `${format(date, "LLL dd, y")} ${time}`;
   };
 
+  const handleApply = () => {
+    onDateRangeChange(tempDateRange);
+    setOpen(false);
+  };
+
   return (
     <div className="flex flex-col sm:flex-row gap-2">
-      <Popover>
+      <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
             variant="outline"
@@ -75,10 +83,10 @@ export function DateTimeRangePicker({
             mode="range"
             defaultMonth={dateRange.from}
             selected={{
-              from: dateRange.from,
-              to: dateRange.to,
+              from: tempDateRange.from,
+              to: tempDateRange.to,
             }}
-            onSelect={onDateRangeChange}
+            onSelect={setTempDateRange}
             numberOfMonths={2}
           />
           <div className="border-t p-3 space-y-2">
@@ -124,6 +132,13 @@ export function DateTimeRangePicker({
                 </SelectContent>
               </Select>
             </div>
+            <Button 
+              className="w-full mt-4" 
+              onClick={handleApply}
+              disabled={!tempDateRange.from || !tempDateRange.to}
+            >
+              Apply
+            </Button>
           </div>
         </PopoverContent>
       </Popover>
