@@ -1,3 +1,4 @@
+
 import { Card } from "@/components/ui/card";
 import { Car, Star, Heart, Users, Calendar } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -43,7 +44,7 @@ export const CarCard = ({ car }: CarCardProps) => {
             <p className="text-sm text-gray-500">{car.year}</p>
           </div>
           <div className="text-right">
-            <span className="text-2xl font-bold text-green-600">${car.rate_per_day}</span>
+            <span className="text-2xl font-bold text-green-600">₹{car.rate_per_day}</span>
             <p className="text-sm text-gray-500">per day</p>
           </div>
         </div>

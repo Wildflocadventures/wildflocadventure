@@ -1,3 +1,4 @@
+
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -215,7 +216,7 @@ const CarDetails = () => {
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-3xl font-bold text-gray-900">${car.rate_per_day}</p>
+                <p className="text-3xl font-bold text-gray-900">₹{car.rate_per_day}</p>
                 <p className="text-sm text-gray-500">per day</p>
               </div>
             </div>
