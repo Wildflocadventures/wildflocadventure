@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { DateRange } from "react-day-picker";
 
 interface DateTimeRangePickerProps {
   dateRange: {
@@ -32,7 +33,10 @@ export function DateTimeRangePicker({
 }: DateTimeRangePickerProps) {
   const [startTime, setStartTime] = React.useState("10:00");
   const [endTime, setEndTime] = React.useState("10:00");
-  const [tempDateRange, setTempDateRange] = React.useState(dateRange);
+  const [tempDateRange, setTempDateRange] = React.useState<DateRange | undefined>({
+    from: dateRange.from,
+    to: dateRange.to
+  });
   const [open, setOpen] = React.useState(false);
 
   const timeOptions = Array.from({ length: 24 * 2 }, (_, i) => {
@@ -47,7 +51,12 @@ export function DateTimeRangePicker({
   };
 
   const handleApply = () => {
-    onDateRangeChange(tempDateRange);
+    if (tempDateRange) {
+      onDateRangeChange({
+        from: tempDateRange.from,
+        to: tempDateRange.to || tempDateRange.from
+      });
+    }
     setOpen(false);
   };
 
@@ -82,10 +91,7 @@ export function DateTimeRangePicker({
             initialFocus
             mode="range"
             defaultMonth={dateRange.from}
-            selected={{
-              from: tempDateRange.from,
-              to: tempDateRange.to,
-            }}
+            selected={tempDateRange}
             onSelect={setTempDateRange}
             numberOfMonths={2}
           />
@@ -135,7 +141,7 @@ export function DateTimeRangePicker({
             <Button 
               className="w-full mt-4" 
               onClick={handleApply}
-              disabled={!tempDateRange.from || !tempDateRange.to}
+              disabled={!tempDateRange?.from}
             >
               Apply
             </Button>
