@@ -11,6 +11,7 @@ import CarDetails from "@/pages/CarDetails";
 import Auth from "@/pages/Auth";
 import CustomerBookings from "@/pages/CustomerBookings";
 import ProviderDashboard from "@/pages/ProviderDashboard";
+import CustomerDetailsForm from "@/pages/CustomerDetailsForm";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -88,6 +89,7 @@ function App() {
               <Route path="/auth" element={<Auth />} />
               <Route path="/provider/dashboard" element={<ProviderDashboard />} />
               <Route path="/customer/bookings" element={<CustomerBookings />} />
+              <Route path="/customer/details" element={<CustomerDetailsForm />} />
             </Routes>
           </div>
           <Toaster />

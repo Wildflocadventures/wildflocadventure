@@ -104,7 +104,7 @@ const CarDetails = () => {
     const totalAmount = days * car.rate_per_day;
 
     try {
-      const { error: bookingError } = await supabase
+      const { data, error: bookingError } = await supabase
         .from("bookings")
         .insert({
           car_id: id,
@@ -113,19 +113,20 @@ const CarDetails = () => {
           end_date: selectedDates.to.toISOString(),
           total_amount: totalAmount,
           status: 'pending'
-        });
+        })
+        .select()
+        .single();
 
       if (bookingError) throw bookingError;
 
       toast({
         title: "Success",
-        description: "Car booked successfully! Please proceed with the payment.",
+        description: "Please fill in your details to complete the booking.",
       });
 
-      // Add a small delay before redirecting to make sure the user sees the success message
-      setTimeout(() => {
-        navigate("/customer/bookings");
-      }, 2000);
+      navigate("/customer/details", { 
+        state: { bookingId: data.id }
+      });
       
     } catch (error) {
       toast({

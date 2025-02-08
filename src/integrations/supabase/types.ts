@@ -139,6 +139,66 @@ export type Database = {
           },
         ]
       }
+      customer_details: {
+        Row: {
+          address: string
+          booking_id: string | null
+          created_at: string
+          current_stay: string
+          customer_id: string | null
+          email: string
+          emergency_contact: string
+          emergency_relation: string
+          full_name: string
+          id: string
+          phone: string
+          state: string
+        }
+        Insert: {
+          address: string
+          booking_id?: string | null
+          created_at?: string
+          current_stay: string
+          customer_id?: string | null
+          email: string
+          emergency_contact: string
+          emergency_relation: string
+          full_name: string
+          id?: string
+          phone: string
+          state: string
+        }
+        Update: {
+          address?: string
+          booking_id?: string | null
+          created_at?: string
+          current_stay?: string
+          customer_id?: string | null
+          email?: string
+          emergency_contact?: string
+          emergency_relation?: string
+          full_name?: string
+          id?: string
+          phone?: string
+          state?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_details_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_details_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
