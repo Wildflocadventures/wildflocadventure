@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AuthButtons } from "@/components/car-listing/AuthButtons";
@@ -9,47 +9,11 @@ import { useAuthProfile } from "@/hooks/useAuthProfile";
 
 const Index = () => {
   const { session, userProfile, handleLogout } = useAuthProfile();
-  const [selectedDates, setSelectedDates] = useState(() => {
-    const savedDates = localStorage.getItem('selectedDates');
-    if (savedDates) {
-      const parsed = JSON.parse(savedDates);
-      return {
-        from: parsed.from ? new Date(parsed.from) : undefined,
-        to: parsed.to ? new Date(parsed.to) : undefined,
-      };
-    }
-    return {
-      from: undefined,
-      to: undefined,
-    };
+  const [selectedDates, setSelectedDates] = useState({
+    from: undefined,
+    to: undefined,
   });
-  
-  const [location, setLocation] = useState(() => {
-    return localStorage.getItem('selectedLocation') || "";
-  });
-
-  // Save dates and location to localStorage whenever they change
-  useEffect(() => {
-    localStorage.setItem('selectedDates', JSON.stringify(selectedDates));
-  }, [selectedDates]);
-
-  useEffect(() => {
-    localStorage.setItem('selectedLocation', location);
-  }, [location]);
-
-  // Clear stored values after successful login
-  useEffect(() => {
-    if (session) {
-      const hasStoredValues = localStorage.getItem('selectedDates') || localStorage.getItem('selectedLocation');
-      if (hasStoredValues) {
-        // We don't clear immediately to avoid a flash of empty content
-        setTimeout(() => {
-          localStorage.removeItem('selectedDates');
-          localStorage.removeItem('selectedLocation');
-        }, 1000);
-      }
-    }
-  }, [session]);
+  const [location, setLocation] = useState("");
 
   const { data: cars, isLoading: carsLoading } = useQuery({
     queryKey: ["cars", selectedDates],
