@@ -84,24 +84,14 @@ export const Navbar = ({ session, userProfile }: NavbarProps) => {
             ) : (
               <>
                 {userProfile?.role === 'provider' ? (
-                  <>
-                    <Button
-                      variant="outline"
-                      onClick={handleProviderDashboard}
-                      className="flex items-center gap-2"
-                    >
-                      <Car className="w-4 h-4" />
-                      Dashboard
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => navigate('/provider/bookings')}
-                      className="flex items-center gap-2"
-                    >
-                      <List className="w-4 h-4" />
-                      My Bookings
-                    </Button>
-                  </>
+                  <Button
+                    variant="outline"
+                    onClick={handleProviderDashboard}
+                    className="flex items-center gap-2"
+                  >
+                    <Car className="w-4 h-4" />
+                    Dashboard
+                  </Button>
                 ) : (
                   <Button
                     variant="outline"
