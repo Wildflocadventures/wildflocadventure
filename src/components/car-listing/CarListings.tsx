@@ -41,7 +41,7 @@ export const CarListings = ({ cars, carsLoading, selectedDates }: CarListingsPro
   return (
     <div className="container mx-auto px-4 py-16">
       <div className="flex justify-between items-center mb-8">
-        <h2 className="text-2xl font-bold">Available Cars</h2>
+        <h2 className="text-2xl font-bold">Available Services</h2>
         {formatDateRange() && (
           <span className="text-gray-600">{formatDateRange()}</span>
         )}
