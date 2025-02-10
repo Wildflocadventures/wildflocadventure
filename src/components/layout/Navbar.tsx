@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { LogIn, UserPlus, LogOut, Car, List } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import logo from './Wildfloc.jpg';
+
 
 interface NavbarProps {
   session: any;
@@ -51,8 +53,9 @@ export const Navbar = ({ session, userProfile }: NavbarProps) => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16 items-center">
           <div className="flex-shrink-0 cursor-pointer" onClick={() => navigate('/')}>
+          <img src={logo} alt="Logo" className="h-10 w-auto mr-2" />
             <h1 className="text-xl font-bold text-blue-600">Wildfloc Adventures</h1>
-             <img src="Wildfloc.jpg"></img>
+             
           </div>
           
           <div className="flex gap-4">
