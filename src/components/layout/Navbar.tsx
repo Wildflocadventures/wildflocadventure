@@ -54,7 +54,7 @@ export const Navbar = ({ session, userProfile }: NavbarProps) => {
         <div className="flex justify-between h-16 items-center">
           <div className="flex-shrink-0 cursor-pointer" onClick={() => navigate('/')}>
           <img src={logo} alt="Logo" className="h-10 w-auto mr-2" />
-            <h1 className="text-xl font-bold text-blue-600">Wildfloc Adventures</h1>
+            
              
           </div>
           
