@@ -52,7 +52,7 @@ export const Navbar = ({ session, userProfile }: NavbarProps) => {
         <div className="flex justify-between h-16 items-center">
           <div className="flex-shrink-0 cursor-pointer" onClick={() => navigate('/')}>
             <h1 className="text-xl font-bold text-blue-600">Wildfloc Adventures</h1>
-            <img src="Wildfloc.jpg" alt="Logo" width="500" height="50"></img>
+            <img src="layout/Wildfloc.jpg" alt="Logo" width="500" height="50"></img>
           </div>
           
           <div className="flex gap-4">
