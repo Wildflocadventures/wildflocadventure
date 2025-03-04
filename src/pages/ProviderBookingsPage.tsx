@@ -15,36 +15,26 @@ const ProviderBookingsPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { session } = useAuthProfile();
+  // Use the hook without requiring authentication
+  const { session } = useAuthProfile({ redirectIfNotAuthenticated: false });
 
   useEffect(() => {
-    // Check if user is logged in and redirect if not
-    if (!session) {
-      toast({
-        title: "Authentication required",
-        description: "Please login to view your bookings",
-        variant: "destructive",
-      });
-      navigate('/auth');
-      return;
-    }
-    
     fetchBookings();
-  }, [session, navigate, toast]);
+  }, []);
 
   const fetchBookings = async () => {
     try {
+      // Check if user is logged in (optional)
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setIsLoading(false);
-        return;
-      }
-
+      
+      // Get provider ID from the URL or use a default for demo purposes
+      const providerId = user?.id || "demo-provider";
+      
       // First get the cars belonging to the provider
       const { data: cars, error: carsError } = await supabase
         .from("cars")
         .select("id, model")
-        .eq("provider_id", user.id);
+        .eq("provider_id", providerId);
 
       if (carsError) throw carsError;
 
@@ -100,7 +90,7 @@ const ProviderBookingsPage = () => {
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold">Your Car Bookings</h1>
+        <h1 className="text-3xl font-bold">Car Bookings Dashboard</h1>
         <Button 
           variant="outline" 
           onClick={() => navigate('/provider/dashboard')}
