@@ -15,23 +15,32 @@ export const ProviderBookings = () => {
   useEffect(() => {
     const fetchBookings = async () => {
       try {
-        // Get current user's cars
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          setIsLoading(false);
+          return;
+        }
+
+        // First get the cars belonging to the provider
         const { data: cars, error: carsError } = await supabase
           .from("cars")
           .select("id, model")
-          .eq("provider_id", (await supabase.auth.getUser()).data.user?.id);
+          .eq("provider_id", user.id);
 
         if (carsError) throw carsError;
+
         if (!cars || cars.length === 0) {
           setIsLoading(false);
           return;
         }
 
-        const carIds = cars.map(car => car.id);
+        // Create a map of car IDs to their models for easier lookup
         const carIdToModel = cars.reduce((acc, car) => {
           acc[car.id] = car.model;
           return acc;
         }, {} as Record<string, string>);
+
+        const carIds = cars.map(car => car.id);
 
         // Get bookings for these cars
         const { data: bookingsData, error: bookingsError } = await supabase
@@ -44,11 +53,11 @@ export const ProviderBookings = () => {
             status
           `)
           .in("car_id", carIds)
-          .order("start_date", { ascending: true });
+          .order("start_date", { ascending: false });
 
         if (bookingsError) throw bookingsError;
 
-        // Annotate bookings with car model
+        // Add car model information to each booking
         const bookingsWithCarModel = bookingsData.map(booking => ({
           ...booking,
           car_model: carIdToModel[booking.car_id]
@@ -59,7 +68,7 @@ export const ProviderBookings = () => {
         console.error("Error fetching provider bookings:", error);
         toast({
           title: "Error",
-          description: "Could not load bookings",
+          description: "Could not load bookings. Please try again later.",
           variant: "destructive",
         });
       } finally {
