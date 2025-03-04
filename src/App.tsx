@@ -12,6 +12,7 @@ import Auth from "@/pages/Auth";
 import CustomerBookings from "@/pages/CustomerBookings";
 import ProviderDashboard from "@/pages/ProviderDashboard";
 import CustomerDetailsForm from "@/pages/CustomerDetailsForm";
+import ProviderBookingsPage from "@/pages/ProviderBookingsPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -88,6 +89,7 @@ function App() {
               <Route path="/car/:id" element={<CarDetails />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/provider/dashboard" element={<ProviderDashboard />} />
+              <Route path="/provider/bookings" element={<ProviderBookingsPage />} />
               <Route path="/customer/bookings" element={<CustomerBookings />} />
               <Route path="/customer/details" element={<CustomerDetailsForm />} />
             </Routes>

@@ -94,6 +94,14 @@ export const Navbar = ({ session, userProfile }: NavbarProps) => {
                       <Car className="w-4 h-4" />
                       Dashboard
                     </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => navigate('/provider/bookings')}
+                      className="flex items-center gap-2"
+                    >
+                      <Calendar className="w-4 h-4" />
+                      Bookings
+                    </Button>
                   </>
                 ) : (
                   <Button
