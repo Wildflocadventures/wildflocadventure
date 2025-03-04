@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
@@ -6,12 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Car, Upload, Pencil, ImagePlus } from "lucide-react";
+import { Car, Upload, Pencil, ImagePlus, Calendar as CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { ProviderBookings } from "@/components/provider/ProviderBookings";
+import { useNavigate } from "react-router-dom";
 
 const ProviderDashboard = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [cars, setCars] = useState<any[]>([]);
   const [editingCar, setEditingCar] = useState<any>(null);
   const [newCar, setNewCar] = useState({
@@ -217,7 +220,17 @@ const ProviderDashboard = () => {
 
   return (
     <div className="container mx-auto py-8 px-4">
-      <h1 className="text-3xl font-bold mb-8">Provider Dashboard</h1>
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="text-3xl font-bold">Provider Dashboard</h1>
+        <Button 
+          onClick={() => navigate('/provider/bookings')}
+          className="flex items-center gap-2"
+          variant="outline"
+        >
+          <CalendarIcon className="w-4 h-4" />
+          View All Bookings
+        </Button>
+      </div>
       
       <div className="grid md:grid-cols-2 gap-8 mb-8">
         <Card>
