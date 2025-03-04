@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Car, Upload, Pencil, ImagePlus } from "lucide-react";
 import { format } from "date-fns";
+import { ProviderBookings } from "@/components/provider/ProviderBookings";
 
 const ProviderDashboard = () => {
   const { toast } = useToast();
@@ -177,7 +178,6 @@ const ProviderDashboard = () => {
     }
 
     try {
-      // First, delete all existing unavailability records for this car
       const { error: deleteError } = await supabase
         .from("car_availability")
         .delete()
@@ -186,7 +186,6 @@ const ProviderDashboard = () => {
 
       if (deleteError) throw deleteError;
 
-      // Then, insert the new unavailability record
       const { error: insertError } = await supabase
         .from("car_availability")
         .insert({
@@ -220,7 +219,7 @@ const ProviderDashboard = () => {
     <div className="container mx-auto py-8 px-4">
       <h1 className="text-3xl font-bold mb-8">Provider Dashboard</h1>
       
-      <div className="grid md:grid-cols-2 gap-8">
+      <div className="grid md:grid-cols-2 gap-8 mb-8">
         <Card>
           <CardHeader>
             <CardTitle>{editingCar ? 'Edit Car' : 'Add New Car'}</CardTitle>
@@ -318,49 +317,53 @@ const ProviderDashboard = () => {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Set Car Unavailability</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>Select Car</Label>
-              <select
-                className="w-full p-2 border rounded"
-                value={selectedCarId || ""}
-                onChange={(e) => setSelectedCarId(e.target.value)}
+        <div className="space-y-8">
+          <Card>
+            <CardHeader>
+              <CardTitle>Set Car Unavailability</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Select Car</Label>
+                <select
+                  className="w-full p-2 border rounded"
+                  value={selectedCarId || ""}
+                  onChange={(e) => setSelectedCarId(e.target.value)}
+                >
+                  <option value="">Select a car</option>
+                  {cars.map((car) => (
+                    <option key={car.id} value={car.id}>
+                      {car.model} ({car.license_plate})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Select Unavailable Dates</Label>
+                <Calendar
+                  mode="range"
+                  selected={{
+                    from: selectedDates.from,
+                    to: selectedDates.to,
+                  }}
+                  onSelect={(range: any) => setSelectedDates(range)}
+                  className="rounded-md border"
+                />
+              </div>
+              
+              <Button 
+                onClick={handleSetUnavailability}
+                className="w-full"
+                disabled={!selectedCarId || !selectedDates.from || !selectedDates.to}
               >
-                <option value="">Select a car</option>
-                {cars.map((car) => (
-                  <option key={car.id} value={car.id}>
-                    {car.model} ({car.license_plate})
-                  </option>
-                ))}
-              </select>
-            </div>
-            
-            <div className="space-y-2">
-              <Label>Select Unavailable Dates</Label>
-              <Calendar
-                mode="range"
-                selected={{
-                  from: selectedDates.from,
-                  to: selectedDates.to,
-                }}
-                onSelect={(range: any) => setSelectedDates(range)}
-                className="rounded-md border"
-              />
-            </div>
-            
-            <Button 
-              onClick={handleSetUnavailability}
-              className="w-full"
-              disabled={!selectedCarId || !selectedDates.from || !selectedDates.to}
-            >
-              Set Unavailability
-            </Button>
-          </CardContent>
-        </Card>
+                Set Unavailability
+              </Button>
+            </CardContent>
+          </Card>
+          
+          <ProviderBookings />
+        </div>
       </div>
 
       <div className="mt-8">
