@@ -24,21 +24,21 @@ const ProviderBookingsPage = () => {
 
   const fetchBookings = async () => {
     try {
-      // Check if user is logged in (optional)
-      const { data: { user } } = await supabase.auth.getUser();
+      // In a real app, you'd get the provider ID from the authenticated user
+      // For demo purposes, we'll fetch bookings for all providers
       
-      // Get provider ID from the URL or use a default for demo purposes
-      const providerId = user?.id || "demo-provider";
-      
-      // First get the cars belonging to the provider
+      // First get all cars with their provider information
       const { data: cars, error: carsError } = await supabase
         .from("cars")
-        .select("id, model")
-        .eq("provider_id", providerId);
+        .select("id, model, provider_id");
 
-      if (carsError) throw carsError;
+      if (carsError) {
+        console.error("Error fetching cars:", carsError);
+        throw carsError;
+      }
 
       if (!cars || cars.length === 0) {
+        console.log("No cars found");
         setIsLoading(false);
         return;
       }
@@ -66,7 +66,12 @@ const ProviderBookingsPage = () => {
         .in("car_id", carIds)
         .order("start_date", { ascending: false });
 
-      if (bookingsError) throw bookingsError;
+      if (bookingsError) {
+        console.error("Error fetching bookings:", bookingsError);
+        throw bookingsError;
+      }
+
+      console.log("Fetched bookings:", bookingsData);
 
       // Add car model information to each booking
       const bookingsWithCarModel = bookingsData.map(booking => ({
