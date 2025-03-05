@@ -51,7 +51,7 @@ const ProviderBookingsPage = () => {
 
       const carIds = cars.map(car => car.id);
 
-      // Get bookings for these cars
+      // Get bookings for these cars, but also include cars without any bookings
       const { data: bookingsData, error: bookingsError } = await supabase
         .from("bookings")
         .select(`
@@ -92,18 +92,33 @@ const ProviderBookingsPage = () => {
     }
   };
 
+  // Function to manually refresh bookings
+  const refreshBookings = () => {
+    setIsLoading(true);
+    fetchBookings();
+  };
+
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold">Car Bookings Dashboard</h1>
-        <Button 
-          variant="outline" 
-          onClick={() => navigate('/provider/dashboard')}
-          className="flex items-center gap-2"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Dashboard
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            onClick={refreshBookings}
+            className="flex items-center gap-2"
+            disabled={isLoading}
+          >
+            {isLoading ? "Refreshing..." : "Refresh Bookings"}
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={() => navigate('/provider/dashboard')}
+            className="flex items-center gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Dashboard
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (
