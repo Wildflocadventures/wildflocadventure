@@ -29,7 +29,25 @@ export const useAuthProfile = () => {
       }
     });
 
-    return () => subscription.unsubscribe();
+    // Set up a realtime subscription to bookings table
+    const bookingsChannel = supabase
+      .channel('bookings-changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'bookings'
+      }, (payload) => {
+        // When bookings change, fetch user profile again to update the data
+        if (session?.user?.id) {
+          fetchUserProfile(session.user.id);
+        }
+      })
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+      supabase.removeChannel(bookingsChannel);
+    };
   }, []);
 
   const fetchUserProfile = async (userId) => {

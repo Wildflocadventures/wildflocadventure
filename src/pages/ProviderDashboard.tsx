@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Car, Upload, Pencil, ImagePlus } from "lucide-react";
+import { Car, Upload, Pencil, ImagePlus, Calendar as CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
+import { Badge } from "@/components/ui/badge";
 
 const ProviderDashboard = () => {
   const { toast } = useToast();
@@ -44,6 +45,17 @@ const ProviderDashboard = () => {
           start_date,
           end_date,
           is_available
+        ),
+        bookings (
+          id,
+          start_date,
+          end_date,
+          status,
+          total_amount,
+          customer_id,
+          profiles (
+            full_name
+          )
         )
       `);
 
@@ -426,6 +438,7 @@ const ProviderDashboard = () => {
                       Edit
                     </Button>
                   </div>
+                  
                   {car.car_availability && car.car_availability.length > 0 && (
                     <div>
                       <h4 className="font-medium text-sm mb-2">Unavailable Dates:</h4>
@@ -435,6 +448,41 @@ const ProviderDashboard = () => {
                           .map((availability: any, index: number) => (
                           <li key={index}>
                             {format(new Date(availability.start_date), "MMM d, yyyy")} - {format(new Date(availability.end_date), "MMM d, yyyy")}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {car.bookings && car.bookings.length > 0 && (
+                    <div className="mt-4">
+                      <h4 className="font-medium text-sm mb-2 flex items-center gap-1">
+                        <CalendarIcon className="w-4 h-4" />
+                        Bookings:
+                      </h4>
+                      <ul className="text-sm space-y-2">
+                        {car.bookings.map((booking: any, index: number) => (
+                          <li key={index} className="p-2 bg-blue-50 rounded-md">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <p className="font-medium">
+                                  {format(new Date(booking.start_date), "MMM d, yyyy")} - {format(new Date(booking.end_date), "MMM d, yyyy")}
+                                </p>
+                                <p className="text-xs text-gray-600 mt-1">
+                                  Customer: {booking.profiles?.full_name || "Unknown"}
+                                </p>
+                              </div>
+                              <Badge className={
+                                booking.status === 'confirmed' ? 'bg-green-500' :
+                                booking.status === 'pending' ? 'bg-yellow-500' :
+                                booking.status === 'cancelled' ? 'bg-red-500' : 'bg-gray-500'
+                              }>
+                                {booking.status}
+                              </Badge>
+                            </div>
+                            <p className="text-xs mt-1">
+                              <span className="font-medium">Amount:</span> ${booking.total_amount}
+                            </p>
                           </li>
                         ))}
                       </ul>
