@@ -1,7 +1,7 @@
 
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { LogIn, UserPlus, LogOut, Car, List, Calendar } from "lucide-react";
+import { LogIn, UserPlus, LogOut, Car, List, Calendar, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import logo from './logomaa.png';
@@ -19,12 +19,20 @@ export const Navbar = ({ session, userProfile }: NavbarProps) => {
     navigate("/auth");
   };
 
+  const handleProviderLogin = () => {
+    navigate("/provider/auth");
+  };
+
   const handleProviderDashboard = () => {
     navigate("/provider/dashboard");
   };
 
   const handleSignup = () => {
-    navigate("/auth");
+    navigate("/auth?tab=register");
+  };
+
+  const handleProviderSignup = () => {
+    navigate("/provider/auth?tab=register");
   };
 
   const handleLogout = async () => {
@@ -68,11 +76,11 @@ export const Navbar = ({ session, userProfile }: NavbarProps) => {
                 </Button>
                 <Button
                   variant="outline"
-                  onClick={handleProviderDashboard}
+                  onClick={handleProviderLogin}
                   className="flex items-center gap-2"
                 >
-                  <Car className="w-4 h-4" />
-                  Provider Dashboard
+                  <Users className="w-4 h-4" />
+                  Provider Login
                 </Button>
                 <Button
                   onClick={handleSignup}

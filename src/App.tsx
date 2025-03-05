@@ -1,3 +1,4 @@
+
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -88,6 +89,7 @@ function App() {
               <Route path="/" element={<Index />} />
               <Route path="/car/:id" element={<CarDetails />} />
               <Route path="/auth" element={<Auth />} />
+              <Route path="/provider/auth" element={<Auth />} />
               <Route path="/provider/dashboard" element={<ProviderDashboard />} />
               <Route path="/provider/bookings" element={<ProviderBookingsPage />} />
               <Route path="/customer/bookings" element={<CustomerBookings />} />
