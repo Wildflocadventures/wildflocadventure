@@ -5,11 +5,10 @@ import { LogIn, UserPlus, LogOut, Car, List, Calendar, Users } from "lucide-reac
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import logo from './logomaa.png';
-import { Profile } from "@/types/supabase";
 
 interface NavbarProps {
   session: any;
-  userProfile: Profile | null;
+  userProfile: any;
 }
 
 export const Navbar = ({ session, userProfile }: NavbarProps) => {
@@ -55,9 +54,6 @@ export const Navbar = ({ session, userProfile }: NavbarProps) => {
       });
     }
   };
-
-  console.log("Navbar - session:", session?.user?.id ? 'User is logged in' : 'No user logged in');
-  console.log("Navbar - userProfile:", userProfile?.role || 'No role');
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-sm border-b">

@@ -1,5 +1,5 @@
 
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster as SonnerToaster } from "sonner";
@@ -14,7 +14,6 @@ import CustomerBookings from "@/pages/CustomerBookings";
 import ProviderDashboard from "@/pages/ProviderDashboard";
 import CustomerDetailsForm from "@/pages/CustomerDetailsForm";
 import ProviderBookingsPage from "@/pages/ProviderBookingsPage";
-import { Profile } from "@/types/supabase";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -28,7 +27,7 @@ const queryClient = new QueryClient({
 function App() {
   const [isInitialized, setIsInitialized] = useState(false);
   const [session, setSession] = useState<any>(null);
-  const [userProfile, setUserProfile] = useState<Profile | null>(null);
+  const [userProfile, setUserProfile] = useState<any>(null);
 
   useEffect(() => {
     const initialize = async () => {
@@ -38,22 +37,13 @@ function App() {
           console.error("Error getting session:", error);
           await supabase.auth.signOut();
         } else if (session?.user) {
-          console.log("App initialization - User is logged in:", session.user.id);
           setSession(session);
-          const { data: profile, error: profileError } = await supabase
+          const { data: profile } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', session.user.id)
             .single();
-            
-          if (profileError) {
-            console.error("Error fetching profile:", profileError);
-          } else if (profile) {
-            console.log("App initialization - User profile loaded:", profile.role);
-            setUserProfile(profile);
-          }
-        } else {
-          console.log("App initialization - No user logged in");
+          setUserProfile(profile);
         }
       } catch (error) {
         console.error("Initialization error:", error);
@@ -65,25 +55,18 @@ function App() {
     initialize();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("Auth state changed:", event, session?.user?.id);
       setSession(session);
       
       if (event === 'SIGNED_OUT') {
         setUserProfile(null);
         queryClient.clear();
       } else if (session?.user) {
-        const { data: profile, error: profileError } = await supabase
+        const { data: profile } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', session.user.id)
           .single();
-          
-        if (profileError) {
-          console.error("Error fetching profile on auth change:", profileError);
-        } else if (profile) {
-          console.log("Auth state change - User profile loaded:", profile.role);
-          setUserProfile(profile);
-        }
+        setUserProfile(profile);
       }
     });
 
@@ -91,23 +74,6 @@ function App() {
       subscription.unsubscribe();
     };
   }, []);
-
-  // Create a protected route component
-  const ProtectedRoute = ({ children, role }: { children: React.ReactNode, role?: 'customer' | 'provider' }) => {
-    if (!isInitialized) return null; // Still initializing
-    
-    if (!session) {
-      console.log("Protected route - redirecting to auth, no session");
-      return <Navigate to="/auth" />;
-    }
-    
-    if (role && userProfile?.role !== role) {
-      console.log(`Protected route - redirecting to /, wrong role: ${userProfile?.role} != ${role}`);
-      return <Navigate to="/" />;
-    }
-    
-    return <>{children}</>;
-  };
 
   if (!isInitialized) {
     return null;
@@ -122,32 +88,12 @@ function App() {
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/car/:id" element={<CarDetails />} />
-              <Route path="/auth" element={
-                session ? <Navigate to="/" /> : <Auth />
-              } />
-              <Route path="/provider/auth" element={
-                session ? <Navigate to="/provider/dashboard" /> : <Auth />
-              } />
-              <Route path="/provider/dashboard" element={
-                <ProtectedRoute role="provider">
-                  <ProviderDashboard />
-                </ProtectedRoute>
-              } />
-              <Route path="/provider/bookings" element={
-                <ProtectedRoute role="provider">
-                  <ProviderBookingsPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/customer/bookings" element={
-                <ProtectedRoute role="customer">
-                  <CustomerBookings />
-                </ProtectedRoute>
-              } />
-              <Route path="/customer/details" element={
-                <ProtectedRoute role="customer">
-                  <CustomerDetailsForm />
-                </ProtectedRoute>
-              } />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/provider/auth" element={<Auth />} />
+              <Route path="/provider/dashboard" element={<ProviderDashboard />} />
+              <Route path="/provider/bookings" element={<ProviderBookingsPage />} />
+              <Route path="/customer/bookings" element={<CustomerBookings />} />
+              <Route path="/customer/details" element={<CustomerDetailsForm />} />
             </Routes>
           </div>
           <Toaster />
