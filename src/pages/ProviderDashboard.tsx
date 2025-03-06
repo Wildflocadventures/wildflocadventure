@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Car, Upload, Pencil, ImagePlus, Calendar as CalendarIcon, UserCheck, RefreshCw } from "lucide-react";
+import { Car, Upload, Pencil, ImagePlus, Calendar as CalendarIcon, Users, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import { ProviderBookings } from "@/components/provider/ProviderBookings";
 import { useNavigate } from "react-router-dom";
@@ -17,7 +17,7 @@ import { Badge } from "@/components/ui/badge";
 const ProviderDashboard = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { userProfile, providerCars, refreshProviderData } = useAuthProfile();
+  const { userProfile, providerCars, refreshProviderData, isLoading } = useAuthProfile();
   
   const [editingCar, setEditingCar] = useState<any>(null);
   const [newCar, setNewCar] = useState({
@@ -37,7 +37,7 @@ const ProviderDashboard = () => {
     to: undefined,
   });
   const [selectedCarId, setSelectedCarId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (!userProfile || userProfile.role !== 'provider') {
@@ -45,8 +45,19 @@ const ProviderDashboard = () => {
     }
   }, [userProfile, navigate]);
 
+  // Load provider data when component mounts
+  useEffect(() => {
+    if (userProfile && userProfile.role === 'provider') {
+      refreshProviderData();
+    }
+  }, [userProfile]);
+
+  useEffect(() => {
+    console.log("Provider cars updated:", providerCars);
+  }, [providerCars]);
+
   const handleAddCar = async () => {
-    setIsLoading(true);
+    setIsSubmitting(true);
     try {
       const { data: carData, error: carError } = await supabase
         .from("cars")
@@ -90,13 +101,13 @@ const ProviderDashboard = () => {
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
   const handleUpdateCar = async () => {
     if (!editingCar) return;
-    setIsLoading(true);
+    setIsSubmitting(true);
 
     try {
       const { error } = await supabase
@@ -132,7 +143,7 @@ const ProviderDashboard = () => {
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -186,7 +197,9 @@ const ProviderDashboard = () => {
       return;
     }
 
+    setIsSubmitting(true);
     try {
+      // First clear any existing unavailability records
       const { error: deleteError } = await supabase
         .from("car_availability")
         .delete()
@@ -195,6 +208,7 @@ const ProviderDashboard = () => {
 
       if (deleteError) throw deleteError;
 
+      // Now insert the new unavailability record
       const { error: insertError } = await supabase
         .from("car_availability")
         .insert({
@@ -221,6 +235,8 @@ const ProviderDashboard = () => {
         description: error.message,
         variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -337,9 +353,9 @@ const ProviderDashboard = () => {
                 <Button 
                   onClick={handleUpdateCar}
                   className="flex-1"
-                  disabled={isLoading || !editingCar.model || !editingCar.year || !editingCar.license_plate || !editingCar.seats || !editingCar.rate_per_day}
+                  disabled={isSubmitting || !editingCar.model || !editingCar.year || !editingCar.license_plate || !editingCar.seats || !editingCar.rate_per_day}
                 >
-                  {isLoading ? "Updating..." : "Update Car"}
+                  {isSubmitting ? "Updating..." : "Update Car"}
                 </Button>
                 <Button 
                   onClick={() => setEditingCar(null)}
@@ -353,9 +369,9 @@ const ProviderDashboard = () => {
               <Button 
                 onClick={handleAddCar}
                 className="w-full"
-                disabled={isLoading || !newCar.model || !newCar.year || !newCar.license_plate || !newCar.seats || !newCar.rate_per_day}
+                disabled={isSubmitting || !newCar.model || !newCar.year || !newCar.license_plate || !newCar.seats || !newCar.rate_per_day}
               >
-                {isLoading ? "Adding..." : "Add Car"}
+                {isSubmitting ? "Adding..." : "Add Car"}
               </Button>
             )}
           </CardContent>
@@ -375,11 +391,15 @@ const ProviderDashboard = () => {
                   onChange={(e) => setSelectedCarId(e.target.value)}
                 >
                   <option value="">Select a car</option>
-                  {providerCars.map((car) => (
-                    <option key={car.id} value={car.id}>
-                      {car.model} ({car.license_plate})
-                    </option>
-                  ))}
+                  {providerCars && providerCars.length > 0 ? (
+                    providerCars.map((car) => (
+                      <option key={car.id} value={car.id}>
+                        {car.model} ({car.license_plate})
+                      </option>
+                    ))
+                  ) : (
+                    <option disabled>No cars available</option>
+                  )}
                 </select>
               </div>
               
@@ -399,9 +419,9 @@ const ProviderDashboard = () => {
               <Button 
                 onClick={handleSetUnavailability}
                 className="w-full"
-                disabled={!selectedCarId || !selectedDates.from || !selectedDates.to}
+                disabled={isSubmitting || !selectedCarId || !selectedDates.from || !selectedDates.to}
               >
-                Set Unavailability
+                {isSubmitting ? "Setting..." : "Set Unavailability"}
               </Button>
             </CardContent>
           </Card>
@@ -412,129 +432,135 @@ const ProviderDashboard = () => {
 
       <div className="mt-8">
         <h2 className="text-2xl font-bold mb-4">Your Cars</h2>
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {providerCars.map((car) => (
-            <Card key={car.id}>
-              <CardContent className="p-6">
-                <div className="relative aspect-video mb-4 bg-gray-100 rounded-lg overflow-hidden group">
-                  {car.image_url ? (
-                    <img
-                      src={car.image_url}
-                      alt={car.model}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <Car className="w-12 h-12 text-gray-400" />
-                    </div>
-                  )}
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <Label htmlFor={`image-${car.id}`} className="cursor-pointer">
-                      <div className="flex items-center gap-2 text-white hover:text-blue-200 transition-colors">
-                        <ImagePlus className="w-6 h-6" />
-                        <span>Upload Image</span>
-                      </div>
-                    </Label>
-                    <Input
-                      id={`image-${car.id}`}
-                      type="file"
-                      className="hidden"
-                      accept="image/*"
-                      onChange={(e) => handleImageUpload(e, car.id)}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="font-medium">{car.model}</h3>
-                    <p className="text-sm text-gray-500">
-                      {car.year} • {car.license_plate}
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-sm">
-                      <span className="font-medium">Rate:</span> ${car.rate_per_day}/day
-                    </p>
-                    <p className="text-sm">
-                      <span className="font-medium">Seats:</span> {car.seats}
-                    </p>
-                    {car.description && (
-                      <p className="text-sm text-gray-600">{car.description}</p>
-                    )}
-                  </div>
-
-                  {/* Display bookings for this car */}
-                  {car.bookings && car.bookings.length > 0 && (
-                    <div className="mt-4 border-t pt-4">
-                      <h4 className="font-medium text-sm mb-2">Bookings:</h4>
-                      <div className="space-y-3">
-                        {car.bookings.slice(0, 3).map((booking: any) => (
-                          <div key={booking.id} className="bg-gray-50 p-2 rounded text-xs">
-                            <div className="flex justify-between mb-1">
-                              <span className="font-medium">{booking.customer_name}</span>
-                              {getStatusBadge(booking.status)}
-                            </div>
-                            <div className="flex justify-between items-center">
-                              <span>
-                                {format(new Date(booking.start_date), "MMM d")} - {format(new Date(booking.end_date), "MMM d, yyyy")}
-                              </span>
-                              <span className="font-medium">${booking.total_amount}</span>
-                            </div>
+        {isLoading ? (
+          <div className="flex justify-center p-12">
+            <p>Loading your cars...</p>
+          </div>
+        ) : (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {providerCars && providerCars.length > 0 ? (
+              providerCars.map((car) => (
+                <Card key={car.id}>
+                  <CardContent className="p-6">
+                    <div className="relative aspect-video mb-4 bg-gray-100 rounded-lg overflow-hidden group">
+                      {car.image_url ? (
+                        <img
+                          src={car.image_url}
+                          alt={car.model}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Car className="w-12 h-12 text-gray-400" />
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <Label htmlFor={`image-${car.id}`} className="cursor-pointer">
+                          <div className="flex items-center gap-2 text-white hover:text-blue-200 transition-colors">
+                            <ImagePlus className="w-6 h-6" />
+                            <span>Upload Image</span>
                           </div>
-                        ))}
-                        {car.bookings.length > 3 && (
-                          <Button 
-                            variant="link" 
-                            className="text-xs w-full" 
-                            onClick={() => navigate('/provider/bookings')}
-                          >
-                            View all {car.bookings.length} bookings
-                          </Button>
+                        </Label>
+                        <Input
+                          id={`image-${car.id}`}
+                          type="file"
+                          className="hidden"
+                          accept="image/*"
+                          onChange={(e) => handleImageUpload(e, car.id)}
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-4">
+                      <div>
+                        <h3 className="font-medium">{car.model}</h3>
+                        <p className="text-sm text-gray-500">
+                          {car.year} • {car.license_plate}
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-sm">
+                          <span className="font-medium">Rate:</span> ${car.rate_per_day}/day
+                        </p>
+                        <p className="text-sm">
+                          <span className="font-medium">Seats:</span> {car.seats}
+                        </p>
+                        {car.description && (
+                          <p className="text-sm text-gray-600">{car.description}</p>
                         )}
                       </div>
-                    </div>
-                  )}
 
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full"
-                      onClick={() => setEditingCar(car)}
-                    >
-                      <Pencil className="w-4 h-4 mr-2" />
-                      Edit
-                    </Button>
-                  </div>
-                  {car.car_availability && car.car_availability.length > 0 && (
-                    <div>
-                      <h4 className="font-medium text-sm mb-2">Unavailable Dates:</h4>
-                      <ul className="text-sm text-red-600 space-y-1">
-                        {car.car_availability
-                          .filter((availability: any) => !availability.is_available)
-                          .map((availability: any, index: number) => (
-                          <li key={index}>
-                            {format(new Date(availability.start_date), "MMM d, yyyy")} - {format(new Date(availability.end_date), "MMM d, yyyy")}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                      {/* Display bookings for this car */}
+                      {car.bookings && car.bookings.length > 0 && (
+                        <div className="mt-4 border-t pt-4">
+                          <h4 className="font-medium text-sm mb-2">Bookings:</h4>
+                          <div className="space-y-3">
+                            {car.bookings.slice(0, 3).map((booking: any) => (
+                              <div key={booking.id} className="bg-gray-50 p-2 rounded text-xs">
+                                <div className="flex justify-between mb-1">
+                                  <span className="font-medium">{booking.customer_name}</span>
+                                  {getStatusBadge(booking.status)}
+                                </div>
+                                <div className="flex justify-between items-center">
+                                  <span>
+                                    {format(new Date(booking.start_date), "MMM d")} - {format(new Date(booking.end_date), "MMM d, yyyy")}
+                                  </span>
+                                  <span className="font-medium">${booking.total_amount}</span>
+                                </div>
+                              </div>
+                            ))}
+                            {car.bookings.length > 3 && (
+                              <Button 
+                                variant="link" 
+                                className="text-xs w-full" 
+                                onClick={() => navigate('/provider/bookings')}
+                              >
+                                View all {car.bookings.length} bookings
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      )}
 
-          {providerCars.length === 0 && (
-            <Card className="col-span-full">
-              <CardContent className="p-6 text-center">
-                <Car className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium mb-2">No Cars Added Yet</h3>
-                <p className="text-gray-500 mb-4">Start by adding your first car using the form above.</p>
-              </CardContent>
-            </Card>
-          )}
-        </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full"
+                          onClick={() => setEditingCar(car)}
+                        >
+                          <Pencil className="w-4 h-4 mr-2" />
+                          Edit
+                        </Button>
+                      </div>
+                      {car.car_availability && car.car_availability.length > 0 && (
+                        <div>
+                          <h4 className="font-medium text-sm mb-2">Unavailable Dates:</h4>
+                          <ul className="text-sm text-red-600 space-y-1">
+                            {car.car_availability
+                              .filter((availability: any) => !availability.is_available)
+                              .map((availability: any, index: number) => (
+                              <li key={index}>
+                                {format(new Date(availability.start_date), "MMM d, yyyy")} - {format(new Date(availability.end_date), "MMM d, yyyy")}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <Card className="col-span-full">
+                <CardContent className="p-6 text-center">
+                  <Car className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium mb-2">No Cars Added Yet</h3>
+                  <p className="text-gray-500 mb-4">Start by adding your first car using the form above.</p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

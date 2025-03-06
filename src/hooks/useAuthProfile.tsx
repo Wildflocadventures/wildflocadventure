@@ -125,6 +125,9 @@ export const useAuthProfile = (options = { redirectIfNotAuthenticated: true }) =
 
   const fetchProviderData = async (userId: string) => {
     try {
+      setIsLoading(true);
+      console.log("Fetching provider data for user:", userId);
+      
       // First get the cars belonging to the provider
       const { data: cars, error: carsError } = await supabase
         .from("cars")
@@ -133,8 +136,11 @@ export const useAuthProfile = (options = { redirectIfNotAuthenticated: true }) =
 
       if (carsError) {
         console.error("Error fetching provider cars:", carsError);
+        setIsLoading(false);
         return;
       }
+
+      console.log("Fetched cars:", cars);
 
       if (!cars || cars.length === 0) {
         setProviderCars([]);
@@ -143,7 +149,25 @@ export const useAuthProfile = (options = { redirectIfNotAuthenticated: true }) =
         return;
       }
 
-      setProviderCars(cars as Car[]);
+      // Fetch car availability data
+      const { data: availabilityData, error: availError } = await supabase
+        .from("car_availability")
+        .select("*")
+        .in("car_id", cars.map(car => car.id));
+      
+      if (availError) {
+        console.error("Error fetching car availability:", availError);
+      } else {
+        console.log("Fetched availability data:", availabilityData);
+      }
+
+      // Add availability data to cars
+      const carsWithAvailability = cars.map(car => ({
+        ...car,
+        car_availability: availabilityData ? availabilityData.filter(a => a.car_id === car.id) : []
+      })) as Car[];
+
+      setProviderCars(carsWithAvailability);
 
       // Get the car IDs to fetch bookings
       const carIds = cars.map(car => car.id);
@@ -170,6 +194,8 @@ export const useAuthProfile = (options = { redirectIfNotAuthenticated: true }) =
         return;
       }
 
+      console.log("Fetched bookings:", bookings);
+
       // Create a map of car IDs to their models for easier lookup
       const carIdToModel = cars.reduce((acc, car) => {
         acc[car.id] = car.model;
@@ -177,7 +203,7 @@ export const useAuthProfile = (options = { redirectIfNotAuthenticated: true }) =
       }, {} as Record<string, string>);
 
       // Enrich bookings with car model information
-      const bookingsWithCarInfo = await Promise.all(bookings.map(async booking => {
+      const bookingsWithCarInfo = await Promise.all((bookings || []).map(async booking => {
         // Get customer name if available
         let customerName = "Unknown Customer";
         if (booking.customer_id) {
@@ -202,7 +228,7 @@ export const useAuthProfile = (options = { redirectIfNotAuthenticated: true }) =
       setProviderBookings(bookingsWithCarInfo);
 
       // Group bookings by car for the dashboard view
-      const updatedCars = cars.map(car => {
+      const updatedCars = carsWithAvailability.map(car => {
         const carBookings = bookingsWithCarInfo.filter(b => b.car_id === car.id);
         return {
           ...car,
@@ -210,6 +236,8 @@ export const useAuthProfile = (options = { redirectIfNotAuthenticated: true }) =
         } as Car;
       });
 
+      console.log("Final cars data with bookings:", updatedCars);
+      
       setProviderCars(updatedCars);
       setIsLoading(false);
     } catch (error) {
