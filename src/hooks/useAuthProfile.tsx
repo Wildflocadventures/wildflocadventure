@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -127,7 +128,7 @@ export const useAuthProfile = (options = { redirectIfNotAuthenticated: true }) =
       // First get the cars belonging to the provider
       const { data: cars, error: carsError } = await supabase
         .from("cars")
-        .select("id, model, license_plate")
+        .select("id, model, license_plate, year, seats, rate_per_day, description, image_url")
         .eq("provider_id", userId);
 
       if (carsError) {
@@ -138,10 +139,11 @@ export const useAuthProfile = (options = { redirectIfNotAuthenticated: true }) =
       if (!cars || cars.length === 0) {
         setProviderCars([]);
         setProviderBookings([]);
+        setIsLoading(false);
         return;
       }
 
-      setProviderCars(cars);
+      setProviderCars(cars as Car[]);
 
       // Get the car IDs to fetch bookings
       const carIds = cars.map(car => car.id);
@@ -164,6 +166,7 @@ export const useAuthProfile = (options = { redirectIfNotAuthenticated: true }) =
 
       if (bookingsError) {
         console.error("Error fetching provider bookings:", bookingsError);
+        setIsLoading(false);
         return;
       }
 
@@ -204,12 +207,14 @@ export const useAuthProfile = (options = { redirectIfNotAuthenticated: true }) =
         return {
           ...car,
           bookings: carBookings
-        };
+        } as Car;
       });
 
       setProviderCars(updatedCars);
+      setIsLoading(false);
     } catch (error) {
       console.error("Error in fetchProviderData:", error);
+      setIsLoading(false);
     }
   };
 
