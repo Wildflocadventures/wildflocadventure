@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -21,6 +20,12 @@ export interface Car {
   id: string;
   model: string;
   license_plate: string;
+  year: number;
+  seats: number;
+  rate_per_day: number;
+  description?: string;
+  image_url?: string;
+  car_availability?: any[];
   bookings?: Booking[];
 }
 
@@ -38,6 +43,11 @@ export const useAuthProfile = (options = { redirectIfNotAuthenticated: true }) =
       setSession(session);
       if (session?.user?.id) {
         fetchUserProfile(session.user.id);
+      } else {
+        setIsLoading(false);
+        if (options.redirectIfNotAuthenticated) {
+          navigate('/auth');
+        }
       }
     });
 
@@ -51,11 +61,15 @@ export const useAuthProfile = (options = { redirectIfNotAuthenticated: true }) =
         setUserProfile(null);
         setProviderCars([]);
         setProviderBookings([]);
+        setIsLoading(false);
+        if (options.redirectIfNotAuthenticated) {
+          navigate('/auth');
+        }
       }
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [navigate, options.redirectIfNotAuthenticated]);
 
   // Set up a real-time subscription for new bookings
   useEffect(() => {
@@ -86,6 +100,7 @@ export const useAuthProfile = (options = { redirectIfNotAuthenticated: true }) =
 
       if (error) {
         console.error("Error fetching user profile:", error);
+        setIsLoading(false);
         return;
       }
 
@@ -95,11 +110,14 @@ export const useAuthProfile = (options = { redirectIfNotAuthenticated: true }) =
         // If user is a provider, fetch their cars and bookings
         if (data.role === 'provider') {
           fetchProviderData(userId);
+        } else {
+          setIsLoading(false);
         }
+      } else {
+        setIsLoading(false);
       }
     } catch (error) {
       console.error("Error in fetchUserProfile:", error);
-    } finally {
       setIsLoading(false);
     }
   };

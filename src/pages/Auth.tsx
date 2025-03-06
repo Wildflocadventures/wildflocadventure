@@ -24,6 +24,34 @@ const Auth = () => {
   });
   const [defaultTab, setDefaultTab] = useState("login");
 
+  // Check if the user is already logged in
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log('Auth page - checking session:', session?.user?.id ? 'User is logged in' : 'No user logged in');
+      
+      if (session?.user) {
+        // Get the user's role
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', session.user.id)
+          .single();
+          
+        console.log('Auth page - user role:', profileData?.role);
+        
+        // Redirect based on role
+        if (profileData?.role === 'provider') {
+          navigate('/provider/dashboard');
+        } else {
+          navigate('/');
+        }
+      }
+    };
+    
+    checkSession();
+  }, [navigate]);
+
   useEffect(() => {
     // Check if we're on a provider-specific route
     const isProviderRoute = location.pathname.includes('/provider');
@@ -71,6 +99,8 @@ const Auth = () => {
 
     setIsLoading(true);
     try {
+      console.log('Signing up with role:', role);
+      
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -92,6 +122,8 @@ const Auth = () => {
         return;
       }
 
+      console.log('Sign up successful, user data:', data);
+
       // Create profile record
       if (data.user) {
         const { error: profileError } = await supabase
@@ -109,7 +141,7 @@ const Auth = () => {
 
       toast({
         title: "Success",
-        description: "Please check your email to confirm your account",
+        description: "Registration successful! You are now logged in.",
       });
       
       // Redirect based on role
@@ -136,6 +168,8 @@ const Auth = () => {
 
     setIsLoading(true);
     try {
+      console.log('Signing in with email:', email);
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -151,6 +185,8 @@ const Auth = () => {
         return;
       }
 
+      console.log('Sign in successful, user data:', data.user.id);
+
       // Get user profile to determine role
       const { data: profileData } = await supabase
         .from('profiles')
@@ -158,6 +194,8 @@ const Auth = () => {
         .eq('id', data.user.id)
         .single();
 
+      console.log('User role from profile:', profileData?.role);
+      
       toast({
         title: "Success",
         description: "Successfully signed in",
