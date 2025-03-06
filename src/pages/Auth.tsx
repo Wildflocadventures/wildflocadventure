@@ -92,6 +92,21 @@ const Auth = () => {
         return;
       }
 
+      // Create profile record
+      if (data.user) {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: data.user.id,
+            full_name: fullName,
+            role: role
+          });
+
+        if (profileError) {
+          console.error("Profile creation error:", profileError);
+        }
+      }
+
       toast({
         title: "Success",
         description: "Please check your email to confirm your account",

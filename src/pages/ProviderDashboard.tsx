@@ -7,15 +7,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Car, Upload, Pencil, ImagePlus, Calendar as CalendarIcon } from "lucide-react";
+import { Car, Upload, Pencil, ImagePlus, Calendar as CalendarIcon, UserCheck, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import { ProviderBookings } from "@/components/provider/ProviderBookings";
 import { useNavigate } from "react-router-dom";
+import { useAuthProfile } from "@/hooks/useAuthProfile";
+import { Badge } from "@/components/ui/badge";
 
 const ProviderDashboard = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [cars, setCars] = useState<any[]>([]);
+  const { userProfile, providerCars, refreshProviderData } = useAuthProfile();
+  
   const [editingCar, setEditingCar] = useState<any>(null);
   const [newCar, setNewCar] = useState({
     model: "",
@@ -34,99 +37,102 @@ const ProviderDashboard = () => {
     to: undefined,
   });
   const [selectedCarId, setSelectedCarId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    fetchCars();
-  }, []);
-
-  const fetchCars = async () => {
-    const { data: cars, error } = await supabase
-      .from("cars")
-      .select(`
-        *,
-        car_availability (
-          start_date,
-          end_date,
-          is_available
-        )
-      `);
-
-    if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to fetch cars",
-        variant: "destructive",
-      });
-    } else {
-      setCars(cars || []);
+    if (!userProfile || userProfile.role !== 'provider') {
+      navigate('/provider/auth');
     }
-  };
+  }, [userProfile, navigate]);
 
   const handleAddCar = async () => {
-    const { data: carData, error: carError } = await supabase
-      .from("cars")
-      .insert({
-        model: newCar.model,
-        year: parseInt(newCar.year),
-        license_plate: newCar.license_plate,
-        seats: parseInt(newCar.seats),
-        rate_per_day: parseFloat(newCar.rate_per_day),
-        description: newCar.description
-      })
-      .select()
-      .single();
+    setIsLoading(true);
+    try {
+      const { data: carData, error: carError } = await supabase
+        .from("cars")
+        .insert({
+          model: newCar.model,
+          year: parseInt(newCar.year),
+          license_plate: newCar.license_plate,
+          seats: parseInt(newCar.seats),
+          rate_per_day: parseFloat(newCar.rate_per_day),
+          description: newCar.description,
+          provider_id: userProfile?.id
+        })
+        .select()
+        .single();
 
-    if (carError) {
+      if (carError) {
+        toast({
+          title: "Error",
+          description: carError.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: "Car added successfully",
+        });
+        refreshProviderData();
+        setNewCar({
+          model: "",
+          year: "",
+          license_plate: "",
+          seats: "",
+          rate_per_day: "",
+          description: ""
+        });
+      }
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: carError.message,
+        description: error.message,
         variant: "destructive",
       });
-    } else {
-      toast({
-        title: "Success",
-        description: "Car added successfully",
-      });
-      await fetchCars();
-      setNewCar({
-        model: "",
-        year: "",
-        license_plate: "",
-        seats: "",
-        rate_per_day: "",
-        description: ""
-      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleUpdateCar = async () => {
     if (!editingCar) return;
+    setIsLoading(true);
 
-    const { error } = await supabase
-      .from("cars")
-      .update({
-        model: editingCar.model,
-        year: parseInt(editingCar.year),
-        license_plate: editingCar.license_plate,
-        seats: parseInt(editingCar.seats),
-        rate_per_day: parseFloat(editingCar.rate_per_day),
-        description: editingCar.description
-      })
-      .eq("id", editingCar.id);
+    try {
+      const { error } = await supabase
+        .from("cars")
+        .update({
+          model: editingCar.model,
+          year: parseInt(editingCar.year),
+          license_plate: editingCar.license_plate,
+          seats: parseInt(editingCar.seats),
+          rate_per_day: parseFloat(editingCar.rate_per_day),
+          description: editingCar.description
+        })
+        .eq("id", editingCar.id);
 
-    if (error) {
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to update car",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: "Car updated successfully",
+        });
+        refreshProviderData();
+        setEditingCar(null);
+      }
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to update car",
+        description: error.message,
         variant: "destructive",
       });
-    } else {
-      toast({
-        title: "Success",
-        description: "Car updated successfully",
-      });
-      await fetchCars();
-      setEditingCar(null);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -155,7 +161,7 @@ const ProviderDashboard = () => {
 
       if (updateError) throw updateError;
 
-      await fetchCars();
+      refreshProviderData();
 
       toast({
         title: "Success",
@@ -205,7 +211,7 @@ const ProviderDashboard = () => {
         description: "Unavailability dates updated successfully",
       });
 
-      await fetchCars();
+      refreshProviderData();
       
       setSelectedCarId(null);
       setSelectedDates({ from: undefined, to: undefined });
@@ -218,18 +224,43 @@ const ProviderDashboard = () => {
     }
   };
 
+  const getStatusBadge = (status: string) => {
+    switch(status) {
+      case 'confirmed':
+        return <Badge className="bg-green-500">Confirmed</Badge>;
+      case 'pending':
+        return <Badge className="bg-yellow-500">Pending</Badge>;
+      case 'cancelled':
+        return <Badge className="bg-red-500">Cancelled</Badge>;
+      case 'completed':
+        return <Badge className="bg-blue-500">Completed</Badge>;
+      default:
+        return <Badge className="bg-gray-500">{status}</Badge>;
+    }
+  };
+
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-bold">Provider Dashboard</h1>
-        <Button 
-          onClick={() => navigate('/provider/bookings')}
-          className="flex items-center gap-2"
-          variant="outline"
-        >
-          <CalendarIcon className="w-4 h-4" />
-          View All Bookings
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            onClick={refreshProviderData}
+            className="flex items-center gap-2"
+            variant="outline"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Refresh Data
+          </Button>
+          <Button 
+            onClick={() => navigate('/provider/bookings')}
+            className="flex items-center gap-2"
+            variant="outline"
+          >
+            <CalendarIcon className="w-4 h-4" />
+            View All Bookings
+          </Button>
+        </div>
       </div>
       
       <div className="grid md:grid-cols-2 gap-8 mb-8">
@@ -306,9 +337,9 @@ const ProviderDashboard = () => {
                 <Button 
                   onClick={handleUpdateCar}
                   className="flex-1"
-                  disabled={!editingCar.model || !editingCar.year || !editingCar.license_plate || !editingCar.seats || !editingCar.rate_per_day}
+                  disabled={isLoading || !editingCar.model || !editingCar.year || !editingCar.license_plate || !editingCar.seats || !editingCar.rate_per_day}
                 >
-                  Update Car
+                  {isLoading ? "Updating..." : "Update Car"}
                 </Button>
                 <Button 
                   onClick={() => setEditingCar(null)}
@@ -322,9 +353,9 @@ const ProviderDashboard = () => {
               <Button 
                 onClick={handleAddCar}
                 className="w-full"
-                disabled={!newCar.model || !newCar.year || !newCar.license_plate || !newCar.seats || !newCar.rate_per_day}
+                disabled={isLoading || !newCar.model || !newCar.year || !newCar.license_plate || !newCar.seats || !newCar.rate_per_day}
               >
-                Add Car
+                {isLoading ? "Adding..." : "Add Car"}
               </Button>
             )}
           </CardContent>
@@ -344,7 +375,7 @@ const ProviderDashboard = () => {
                   onChange={(e) => setSelectedCarId(e.target.value)}
                 >
                   <option value="">Select a car</option>
-                  {cars.map((car) => (
+                  {providerCars.map((car) => (
                     <option key={car.id} value={car.id}>
                       {car.model} ({car.license_plate})
                     </option>
@@ -382,7 +413,7 @@ const ProviderDashboard = () => {
       <div className="mt-8">
         <h2 className="text-2xl font-bold mb-4">Your Cars</h2>
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {cars.map((car) => (
+          {providerCars.map((car) => (
             <Card key={car.id}>
               <CardContent className="p-6">
                 <div className="relative aspect-video mb-4 bg-gray-100 rounded-lg overflow-hidden group">
@@ -431,6 +462,39 @@ const ProviderDashboard = () => {
                       <p className="text-sm text-gray-600">{car.description}</p>
                     )}
                   </div>
+
+                  {/* Display bookings for this car */}
+                  {car.bookings && car.bookings.length > 0 && (
+                    <div className="mt-4 border-t pt-4">
+                      <h4 className="font-medium text-sm mb-2">Bookings:</h4>
+                      <div className="space-y-3">
+                        {car.bookings.slice(0, 3).map((booking: any) => (
+                          <div key={booking.id} className="bg-gray-50 p-2 rounded text-xs">
+                            <div className="flex justify-between mb-1">
+                              <span className="font-medium">{booking.customer_name}</span>
+                              {getStatusBadge(booking.status)}
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span>
+                                {format(new Date(booking.start_date), "MMM d")} - {format(new Date(booking.end_date), "MMM d, yyyy")}
+                              </span>
+                              <span className="font-medium">${booking.total_amount}</span>
+                            </div>
+                          </div>
+                        ))}
+                        {car.bookings.length > 3 && (
+                          <Button 
+                            variant="link" 
+                            className="text-xs w-full" 
+                            onClick={() => navigate('/provider/bookings')}
+                          >
+                            View all {car.bookings.length} bookings
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex gap-2">
                     <Button
                       variant="outline"
@@ -460,6 +524,16 @@ const ProviderDashboard = () => {
               </CardContent>
             </Card>
           ))}
+
+          {providerCars.length === 0 && (
+            <Card className="col-span-full">
+              <CardContent className="p-6 text-center">
+                <Car className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium mb-2">No Cars Added Yet</h3>
+                <p className="text-gray-500 mb-4">Start by adding your first car using the form above.</p>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>
