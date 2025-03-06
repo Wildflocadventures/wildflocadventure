@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,12 +12,30 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 const Auth = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [role, setRole] = useState<"customer" | "provider">("customer");
+  const [role, setRole] = useState<"customer" | "provider">(() => {
+    // Set default role based on URL
+    return location.pathname.includes('/provider') ? "provider" : "customer";
+  });
+  const [defaultTab, setDefaultTab] = useState("login");
+
+  useEffect(() => {
+    // Check if we're on a provider-specific route
+    const isProviderRoute = location.pathname.includes('/provider');
+    setRole(isProviderRoute ? "provider" : "customer");
+    
+    // Set default tab if specified in query params
+    const params = new URLSearchParams(location.search);
+    const tab = params.get('tab');
+    if (tab === 'register') {
+      setDefaultTab('register');
+    }
+  }, [location]);
 
   const validateForm = (isSignUp = false) => {
     if (!email || !password) {
@@ -77,7 +96,13 @@ const Auth = () => {
         title: "Success",
         description: "Please check your email to confirm your account",
       });
-      navigate("/");
+      
+      // Redirect based on role
+      if (role === "provider") {
+        navigate("/provider/dashboard");
+      } else {
+        navigate("/");
+      }
     } catch (error: any) {
       console.error("Unexpected error:", error);
       toast({
@@ -111,11 +136,24 @@ const Auth = () => {
         return;
       }
 
+      // Get user profile to determine role
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', data.user.id)
+        .single();
+
       toast({
         title: "Success",
         description: "Successfully signed in",
       });
-      navigate("/");
+      
+      // Redirect based on user role
+      if (profileData?.role === "provider") {
+        navigate("/provider/dashboard");
+      } else {
+        navigate("/");
+      }
     } catch (error: any) {
       console.error("Unexpected error:", error);
       toast({
@@ -128,17 +166,26 @@ const Auth = () => {
     }
   };
 
+  const getPageTitle = () => {
+    if (location.pathname.includes('/provider')) {
+      return "Service Provider Portal";
+    }
+    return "Wildfloc Adventures";
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-blue-600 to-indigo-700 p-4">
       <Card className="w-full max-w-md bg-white/90 backdrop-blur-none">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl text-center">Welcome to Wildfloc Adventures</CardTitle>
+          <CardTitle className="text-2xl text-center">Welcome to {getPageTitle()}</CardTitle>
           <CardDescription className="text-center">
-            Sign in to your account or create a new one
+            {role === "provider" 
+              ? "Sign in or register as a service provider" 
+              : "Sign in to your account or create a new one"}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="login" className="space-y-4">
+          <Tabs defaultValue={defaultTab} className="space-y-4">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="login">Login</TabsTrigger>
               <TabsTrigger value="register">Register</TabsTrigger>
@@ -172,6 +219,32 @@ const Auth = () => {
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? "Signing in..." : "Sign In"}
                 </Button>
+                
+                {role === "provider" && (
+                  <div className="text-center mt-4">
+                    <Button 
+                      variant="outline" 
+                      type="button" 
+                      onClick={() => navigate("/auth")}
+                      className="text-sm"
+                    >
+                      Switch to Customer Login
+                    </Button>
+                  </div>
+                )}
+                
+                {role === "customer" && (
+                  <div className="text-center mt-4">
+                    <Button 
+                      variant="outline" 
+                      type="button" 
+                      onClick={() => navigate("/provider/auth")}
+                      className="text-sm"
+                    >
+                      Service Provider Login
+                    </Button>
+                  </div>
+                )}
               </form>
             </TabsContent>
 
@@ -212,26 +285,49 @@ const Auth = () => {
                     className="bg-white"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label>Account Type</Label>
-                  <RadioGroup
-                    value={role}
-                    onValueChange={(value) => setRole(value as "customer" | "provider")}
-                    className="grid grid-cols-2 gap-4"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="customer" id="customer" />
-                      <Label htmlFor="customer">Customer</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="provider" id="provider" />
-                      <Label htmlFor="provider">Service Provider</Label>
-                    </div>
-                  </RadioGroup>
-                </div>
+                
+                {!location.pathname.includes('/provider') && (
+                  <div className="space-y-2">
+                    <Label>Account Type</Label>
+                    <RadioGroup
+                      value={role}
+                      onValueChange={(value) => setRole(value as "customer" | "provider")}
+                      className="grid grid-cols-2 gap-4"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="customer" id="customer" />
+                        <Label htmlFor="customer">Customer</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="provider" id="provider" />
+                        <Label htmlFor="provider">Service Provider</Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
+                )}
+                
+                {location.pathname.includes('/provider') && (
+                  <div className="p-3 bg-blue-50 rounded-md text-sm text-blue-700 mb-2">
+                    You are registering as a Service Provider
+                  </div>
+                )}
+                
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? "Creating account..." : "Create Account"}
                 </Button>
+                
+                {role === "provider" && location.pathname.includes('/provider') && (
+                  <div className="text-center mt-4">
+                    <Button 
+                      variant="outline" 
+                      type="button" 
+                      onClick={() => navigate("/auth")}
+                      className="text-sm"
+                    >
+                      Switch to Customer Registration
+                    </Button>
+                  </div>
+                )}
               </form>
             </TabsContent>
           </Tabs>

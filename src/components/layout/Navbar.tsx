@@ -1,11 +1,10 @@
 
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { LogIn, UserPlus, LogOut, Car, List } from "lucide-react";
+import { LogIn, UserPlus, LogOut, Car, List, Calendar, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import logo from './logomaa.png';
-
 
 interface NavbarProps {
   session: any;
@@ -20,12 +19,20 @@ export const Navbar = ({ session, userProfile }: NavbarProps) => {
     navigate("/auth");
   };
 
+  const handleProviderLogin = () => {
+    navigate("/provider/auth");
+  };
+
   const handleProviderDashboard = () => {
     navigate("/provider/dashboard");
   };
 
   const handleSignup = () => {
-    navigate("/auth");
+    navigate("/auth?tab=register");
+  };
+
+  const handleProviderSignup = () => {
+    navigate("/provider/auth?tab=register");
   };
 
   const handleLogout = async () => {
@@ -53,9 +60,7 @@ export const Navbar = ({ session, userProfile }: NavbarProps) => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16 items-center">
           <div className="flex-shrink-0 cursor-pointer" onClick={() => navigate('/')}>
-          <img src={logo} alt="Logo" className="h-12 w-auto mr-4" />
-            
-             
+            <img src={logo} alt="Logo" className="h-12 w-auto mr-4" />
           </div>
           
           <div className="flex gap-4">
@@ -71,11 +76,11 @@ export const Navbar = ({ session, userProfile }: NavbarProps) => {
                 </Button>
                 <Button
                   variant="outline"
-                  onClick={handleProviderDashboard}
+                  onClick={handleProviderLogin}
                   className="flex items-center gap-2"
                 >
-                  <Car className="w-4 h-4" />
-                  Provider Dashboard
+                  <Users className="w-4 h-4" />
+                  Provider Login
                 </Button>
                 <Button
                   onClick={handleSignup}
@@ -88,14 +93,24 @@ export const Navbar = ({ session, userProfile }: NavbarProps) => {
             ) : (
               <>
                 {userProfile?.role === 'provider' ? (
-                  <Button
-                    variant="outline"
-                    onClick={handleProviderDashboard}
-                    className="flex items-center gap-2"
-                  >
-                    <Car className="w-4 h-4" />
-                    Dashboard
-                  </Button>
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={handleProviderDashboard}
+                      className="flex items-center gap-2"
+                    >
+                      <Car className="w-4 h-4" />
+                      Dashboard
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => navigate('/provider/bookings')}
+                      className="flex items-center gap-2"
+                    >
+                      <Calendar className="w-4 h-4" />
+                      Bookings
+                    </Button>
+                  </>
                 ) : (
                   <Button
                     variant="outline"

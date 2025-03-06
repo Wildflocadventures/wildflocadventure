@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 
-export const useAuthProfile = () => {
+export const useAuthProfile = (options = { redirectIfNotAuthenticated: true }) => {
   const [session, setSession] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
   const { toast } = useToast();
@@ -29,25 +29,7 @@ export const useAuthProfile = () => {
       }
     });
 
-    // Set up a realtime subscription to bookings table
-    const bookingsChannel = supabase
-      .channel('bookings-changes')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'bookings'
-      }, (payload) => {
-        // When bookings change, fetch user profile again to update the data
-        if (session?.user?.id) {
-          fetchUserProfile(session.user.id);
-        }
-      })
-      .subscribe();
-
-    return () => {
-      subscription.unsubscribe();
-      supabase.removeChannel(bookingsChannel);
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
   const fetchUserProfile = async (userId) => {

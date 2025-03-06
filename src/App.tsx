@@ -1,3 +1,4 @@
+
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -12,6 +13,7 @@ import Auth from "@/pages/Auth";
 import CustomerBookings from "@/pages/CustomerBookings";
 import ProviderDashboard from "@/pages/ProviderDashboard";
 import CustomerDetailsForm from "@/pages/CustomerDetailsForm";
+import ProviderBookingsPage from "@/pages/ProviderBookingsPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -87,7 +89,9 @@ function App() {
               <Route path="/" element={<Index />} />
               <Route path="/car/:id" element={<CarDetails />} />
               <Route path="/auth" element={<Auth />} />
+              <Route path="/provider/auth" element={<Auth />} />
               <Route path="/provider/dashboard" element={<ProviderDashboard />} />
+              <Route path="/provider/bookings" element={<ProviderBookingsPage />} />
               <Route path="/customer/bookings" element={<CustomerBookings />} />
               <Route path="/customer/details" element={<CustomerDetailsForm />} />
             </Routes>
