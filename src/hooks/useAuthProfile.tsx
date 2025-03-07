@@ -3,7 +3,8 @@ import { useProviderAuth } from "@/hooks/useProviderAuth";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { AuthOptions } from "@/hooks/useAuth";
 
-export { Car } from "@/hooks/useProviderAuth";
+// Change from export { Car } to export type { Car }
+export type { Car } from "@/hooks/useProviderAuth";
 
 export const useAuthProfile = (options: AuthOptions = { redirectIfNotAuthenticated: true }) => {
   // This is a wrapper around the specific hooks for backward compatibility
