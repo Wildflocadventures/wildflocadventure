@@ -31,7 +31,27 @@ export const ProviderBookings = () => {
       
       console.log("ProviderBookings: User ID:", user.id);
 
-      // First get the cars belonging to the provider
+      // First fetch the provider profile to ensure we get the correct role
+      const { data: providerProfile, error: profileError } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+
+      if (profileError) {
+        console.error("ProviderBookings: Error fetching provider profile:", profileError);
+        throw profileError;
+      }
+
+      if (providerProfile?.role !== "provider") {
+        console.log("ProviderBookings: User is not a provider", providerProfile);
+        setIsLoading(false);
+        return;
+      }
+      
+      console.log("ProviderBookings: Confirmed provider role");
+
+      // Get the cars belonging to the provider
       const { data: cars, error: carsError } = await supabase
         .from("cars")
         .select("id, model")
@@ -42,7 +62,7 @@ export const ProviderBookings = () => {
         throw carsError;
       }
 
-      console.log("ProviderBookings: Found cars:", cars?.length);
+      console.log("ProviderBookings: Found cars:", cars?.length, cars);
 
       if (!cars || cars.length === 0) {
         console.log("ProviderBookings: No cars found for this provider");
@@ -69,6 +89,7 @@ export const ProviderBookings = () => {
           start_date,
           end_date,
           status,
+          total_amount,
           customer_id,
           profiles:customer_id(full_name)
         `)
@@ -89,6 +110,7 @@ export const ProviderBookings = () => {
         customer_name: booking.profiles?.full_name || "Unknown Customer"
       })) || [];
 
+      console.log("ProviderBookings: Processed bookings:", bookingsWithCarModel);
       setBookings(bookingsWithCarModel);
     } catch (error: any) {
       console.error("Error fetching provider bookings:", error);
@@ -104,6 +126,10 @@ export const ProviderBookings = () => {
 
   const handleRefresh = () => {
     fetchBookings();
+    toast({
+      title: "Refreshing",
+      description: "Fetching latest booking data...",
+    });
   };
 
   if (isLoading) {
@@ -129,6 +155,9 @@ export const ProviderBookings = () => {
         <CardContent className="pt-1 flex flex-col items-center justify-center text-center h-40">
           <CalendarDays className="h-10 w-10 text-gray-400 mb-4" />
           <p className="text-gray-500">No bookings yet for your cars</p>
+          <p className="text-xs text-gray-400 mt-2">
+            Bookings will appear here once customers book your vehicles
+          </p>
         </CardContent>
       </Card>
     );
@@ -157,6 +186,9 @@ export const ProviderBookings = () => {
                 </div>
                 <div className="mt-1 text-xs text-gray-500">
                   Customer: {booking.customer_name}
+                </div>
+                <div className="mt-1 text-xs text-gray-500">
+                  Amount: ${booking.total_amount}
                 </div>
               </div>
               <div className="flex-shrink-0">
