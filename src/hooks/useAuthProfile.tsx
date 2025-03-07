@@ -25,11 +25,14 @@ export const useAuthProfile = (options = { redirectIfNotAuthenticated: true }) =
   const navigate = useNavigate();
 
   useEffect(() => {
+    console.log("useAuthProfile: Initializing");
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log("useAuthProfile: Got session", session?.user?.id);
       setSession(session);
       if (session?.user?.id) {
         fetchUserProfile(session.user.id);
       } else if (options.redirectIfNotAuthenticated) {
+        console.log("useAuthProfile: Redirecting to auth");
         navigate('/auth');
       }
     });
@@ -37,12 +40,14 @@ export const useAuthProfile = (options = { redirectIfNotAuthenticated: true }) =
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log("useAuthProfile: Auth state changed", session?.user?.id);
       setSession(session);
       if (session?.user?.id) {
         fetchUserProfile(session.user.id);
       } else {
         setUserProfile(null);
         if (options.redirectIfNotAuthenticated) {
+          console.log("useAuthProfile: Redirecting to auth on state change");
           navigate('/auth');
         }
       }
@@ -54,6 +59,7 @@ export const useAuthProfile = (options = { redirectIfNotAuthenticated: true }) =
   const fetchUserProfile = async (userId) => {
     try {
       setIsLoading(true);
+      console.log("useAuthProfile: Fetching user profile for", userId);
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
@@ -71,7 +77,8 @@ export const useAuthProfile = (options = { redirectIfNotAuthenticated: true }) =
         
         // If the user is a provider, fetch their cars
         if (data.role === 'provider') {
-          fetchProviderCars(userId);
+          console.log("useAuthProfile: User is a provider, fetching cars");
+          fetchProviderCarsWithBookings(userId);
         }
       }
     } catch (error) {
@@ -108,12 +115,14 @@ export const useAuthProfile = (options = { redirectIfNotAuthenticated: true }) =
 
   const refreshProviderData = async () => {
     if (session?.user && userProfile?.role === 'provider') {
-      await fetchProviderCars(session.user.id);
+      console.log("useAuthProfile: Refreshing provider data");
+      await fetchProviderCarsWithBookings(session.user.id);
     }
   };
 
   const fetchProviderCarsWithBookings = async (providerId) => {
     try {
+      console.log("useAuthProfile: Fetching cars with bookings for provider:", providerId);
       const { data: cars, error: carsError } = await supabase
         .from("cars")
         .select("id, model, license_plate, year, seats, rate_per_day, image_url, description")
@@ -124,12 +133,15 @@ export const useAuthProfile = (options = { redirectIfNotAuthenticated: true }) =
         return;
       }
 
+      console.log("useAuthProfile: Found cars for provider:", cars?.length);
+      
       if (!cars || cars.length === 0) {
         setProviderCars([]);
         return;
       }
 
       const carIds = cars.map(car => car.id);
+      console.log("useAuthProfile: Car IDs:", carIds);
 
       const { data: bookings, error: bookingsError } = await supabase
         .from("bookings")
@@ -144,15 +156,19 @@ export const useAuthProfile = (options = { redirectIfNotAuthenticated: true }) =
         return;
       }
 
+      console.log("useAuthProfile: Found bookings:", bookings?.length);
+
       // Map bookings to their respective cars
       const carsWithBookings = cars.map(car => {
         const carBookings = bookings
-          .filter(booking => booking.car_id === car.id)
-          .map(booking => ({
+          ?.filter(booking => booking.car_id === car.id)
+          ?.map(booking => ({
             ...booking,
             customer_name: booking.profiles?.full_name || "Unknown Customer"
-          }));
+          })) || [];
 
+        console.log(`useAuthProfile: Car ${car.id} has ${carBookings.length} bookings`);
+        
         return {
           ...car,
           bookings: carBookings

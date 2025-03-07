@@ -15,31 +15,46 @@ const ProviderBookingsPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const navigate = useNavigate();
-  // Use the hook without requiring authentication
-  const { session } = useAuthProfile({ redirectIfNotAuthenticated: false });
+  // Use the hook to ensure we're authenticated
+  const { session, userProfile } = useAuthProfile({ redirectIfNotAuthenticated: true });
 
   useEffect(() => {
-    fetchBookings();
-  }, []);
+    if (session?.user) {
+      console.log("ProviderBookingsPage: User session found, fetching bookings");
+      fetchBookings();
+    }
+  }, [session]);
 
   const fetchBookings = async () => {
     try {
-      // In a real app, you'd get the provider ID from the authenticated user
-      // For demo purposes, we'll fetch bookings for all providers
+      setIsLoading(true);
+      console.log("ProviderBookingsPage: Fetching bookings");
       
-      // First get all cars with their provider information
+      if (!session?.user) {
+        console.log("ProviderBookingsPage: No authenticated user found");
+        return;
+      }
+      
+      const userId = session.user.id;
+      console.log("ProviderBookingsPage: User ID:", userId);
+      
+      // First get all cars belonging to this provider
       const { data: cars, error: carsError } = await supabase
         .from("cars")
-        .select("id, model, provider_id");
+        .select("id, model, provider_id")
+        .eq("provider_id", userId);
 
       if (carsError) {
-        console.error("Error fetching cars:", carsError);
+        console.error("ProviderBookingsPage: Error fetching cars:", carsError);
         throw carsError;
       }
 
+      console.log("ProviderBookingsPage: Found cars:", cars?.length);
+
       if (!cars || cars.length === 0) {
-        console.log("No cars found");
+        console.log("ProviderBookingsPage: No cars found for this provider");
         setIsLoading(false);
+        setBookings([]);
         return;
       }
 
@@ -50,8 +65,9 @@ const ProviderBookingsPage = () => {
       }, {} as Record<string, string>);
 
       const carIds = cars.map(car => car.id);
+      console.log("ProviderBookingsPage: Car IDs:", carIds);
 
-      // Get bookings for these cars, but also include cars without any bookings
+      // Get bookings for these cars
       const { data: bookingsData, error: bookingsError } = await supabase
         .from("bookings")
         .select(`
@@ -61,23 +77,25 @@ const ProviderBookingsPage = () => {
           start_date,
           end_date,
           status,
-          total_amount
+          total_amount,
+          profiles:customer_id(full_name)
         `)
         .in("car_id", carIds)
         .order("start_date", { ascending: false });
 
       if (bookingsError) {
-        console.error("Error fetching bookings:", bookingsError);
+        console.error("ProviderBookingsPage: Error fetching bookings:", bookingsError);
         throw bookingsError;
       }
 
-      console.log("Fetched bookings:", bookingsData);
+      console.log("ProviderBookingsPage: Fetched bookings:", bookingsData);
 
       // Add car model information to each booking
-      const bookingsWithCarModel = bookingsData.map(booking => ({
+      const bookingsWithCarModel = bookingsData?.map(booking => ({
         ...booking,
-        car_model: carIdToModel[booking.car_id]
-      }));
+        car_model: carIdToModel[booking.car_id],
+        customer_name: booking.profiles?.full_name || "Unknown Customer"
+      })) || [];
 
       setBookings(bookingsWithCarModel);
     } catch (error: any) {
@@ -165,6 +183,9 @@ const ProviderBookingsPage = () => {
                       <CalendarDays className="h-4 w-4 text-gray-500" />
                       {format(new Date(booking.start_date), "MMM d, yyyy")} - {format(new Date(booking.end_date), "MMM d, yyyy")}
                     </div>
+                  </div>
+                  <div className="mt-1 text-sm text-gray-500">
+                    Customer: {booking.customer_name}
                   </div>
                   <div className="border-t pt-2 mt-2">
                     <div className="flex justify-between items-center">
