@@ -74,6 +74,15 @@ export const useProviderAuth = (options: AuthOptions = { redirectIfNotAuthentica
       }
 
       console.log("useProviderAuth: Found cars for provider:", cars?.length);
+      console.log("useProviderAuth: All cars:", cars);
+      
+      // Check if there's a Thar specifically
+      const tharCar = cars?.find(car => car.model.toLowerCase().includes('thar'));
+      if (tharCar) {
+        console.log("useProviderAuth: Found a Thar car:", tharCar);
+      } else {
+        console.log("useProviderAuth: No Thar car found in provider's cars");
+      }
       
       if (!cars || cars.length === 0) {
         setProviderCars([]);
@@ -100,6 +109,12 @@ export const useProviderAuth = (options: AuthOptions = { redirectIfNotAuthentica
       console.log("useProviderAuth: Found bookings:", bookings?.length);
       console.log("useProviderAuth: Bookings data:", bookings);
 
+      // Check specifically for Thar bookings
+      if (tharCar) {
+        const tharBookings = bookings?.filter(booking => booking.car_id === tharCar.id);
+        console.log(`useProviderAuth: Thar car (${tharCar.id}) has ${tharBookings?.length || 0} bookings:`, tharBookings);
+      }
+
       // Map bookings to their respective cars
       const carsWithBookings = cars.map(car => {
         const carBookings = bookings
@@ -109,8 +124,10 @@ export const useProviderAuth = (options: AuthOptions = { redirectIfNotAuthentica
             customer_name: booking.profiles?.full_name || "Unknown Customer"
           })) || [];
 
-        console.log(`useProviderAuth: Car ${car.id} has ${carBookings.length} bookings`);
-        console.log(`useProviderAuth: Car ${car.id} bookings:`, carBookings);
+        console.log(`useProviderAuth: Car ${car.id} (${car.model}) has ${carBookings.length} bookings`);
+        if (carBookings.length > 0) {
+          console.log(`useProviderAuth: Car ${car.id} (${car.model}) bookings:`, carBookings);
+        }
         
         return {
           ...car,
