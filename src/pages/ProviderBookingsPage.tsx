@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -67,7 +66,7 @@ const ProviderBookingsPage = () => {
       const carIds = cars.map(car => car.id);
       console.log("ProviderBookingsPage: Car IDs:", carIds);
 
-      // Get bookings for these cars
+      // Get bookings for these cars with explicit inclusion of all statuses
       const { data: bookingsData, error: bookingsError } = await supabase
         .from("bookings")
         .select(`
@@ -80,15 +79,14 @@ const ProviderBookingsPage = () => {
           total_amount,
           profiles:customer_id(full_name)
         `)
-        .in("car_id", carIds)
-        .order("start_date", { ascending: false });
+        .in("car_id", carIds);
 
       if (bookingsError) {
         console.error("ProviderBookingsPage: Error fetching bookings:", bookingsError);
         throw bookingsError;
       }
 
-      console.log("ProviderBookingsPage: Fetched bookings:", bookingsData);
+      console.log("ProviderBookingsPage: Raw bookings data:", bookingsData);
 
       // Add car model information to each booking
       const bookingsWithCarModel = bookingsData?.map(booking => ({
@@ -97,6 +95,7 @@ const ProviderBookingsPage = () => {
         customer_name: booking.profiles?.full_name || "Unknown Customer"
       })) || [];
 
+      console.log("ProviderBookingsPage: Processed bookings with models:", bookingsWithCarModel);
       setBookings(bookingsWithCarModel);
     } catch (error: any) {
       console.error("Error fetching provider bookings:", error);
@@ -122,7 +121,7 @@ const ProviderBookingsPage = () => {
         <h1 className="text-3xl font-bold">Car Bookings Dashboard</h1>
         <div className="flex gap-2">
           <Button 
-            onClick={refreshBookings}
+            onClick={() => fetchBookings()}
             className="flex items-center gap-2"
             disabled={isLoading}
           >
@@ -150,6 +149,7 @@ const ProviderBookingsPage = () => {
           <CardContent className="pt-6 flex flex-col items-center justify-center text-center h-40">
             <CalendarDays className="h-10 w-10 text-gray-400 mb-4" />
             <p className="text-gray-500">No bookings yet for your cars</p>
+            <p className="text-gray-400 mt-2">When customers book your cars, they will appear here</p>
           </CardContent>
         </Card>
       ) : (

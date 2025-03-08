@@ -53,7 +53,8 @@ const CustomerDetailsForm = () => {
     }
 
     try {
-      const { error } = await supabase
+      // First save customer details
+      const { error: detailsError } = await supabase
         .from("customer_details")
         .insert({
           booking_id: bookingId,
@@ -61,15 +62,24 @@ const CustomerDetailsForm = () => {
           ...formData,
         });
 
-      if (error) throw error;
+      if (detailsError) throw detailsError;
+
+      // Then update booking status to confirmed (simulating payment confirmation)
+      const { error: bookingError } = await supabase
+        .from("bookings")
+        .update({ status: 'confirmed' })
+        .eq('id', bookingId);
+
+      if (bookingError) throw bookingError;
 
       toast({
-        title: "Success",
-        description: "Your details have been saved successfully!",
+        title: "Booking Confirmed!",
+        description: "Your details have been saved and booking is confirmed.",
       });
 
       navigate("/customer/bookings");
     } catch (error: any) {
+      console.error("Error in customer details submission:", error);
       toast({
         title: "Error",
         description: error.message,

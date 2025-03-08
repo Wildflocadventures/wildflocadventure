@@ -83,6 +83,7 @@ export const useProviderAuth = (options: AuthOptions = { redirectIfNotAuthentica
       const carIds = cars.map(car => car.id);
       console.log("useProviderAuth: Car IDs:", carIds);
 
+      // Specifically query for all bookings regardless of status
       const { data: bookings, error: bookingsError } = await supabase
         .from("bookings")
         .select(`
@@ -97,6 +98,7 @@ export const useProviderAuth = (options: AuthOptions = { redirectIfNotAuthentica
       }
 
       console.log("useProviderAuth: Found bookings:", bookings?.length);
+      console.log("useProviderAuth: Bookings data:", bookings);
 
       // Map bookings to their respective cars
       const carsWithBookings = cars.map(car => {
@@ -108,6 +110,7 @@ export const useProviderAuth = (options: AuthOptions = { redirectIfNotAuthentica
           })) || [];
 
         console.log(`useProviderAuth: Car ${car.id} has ${carBookings.length} bookings`);
+        console.log(`useProviderAuth: Car ${car.id} bookings:`, carBookings);
         
         return {
           ...car,

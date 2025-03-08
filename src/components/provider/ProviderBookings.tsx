@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -51,10 +50,10 @@ export const ProviderBookings = () => {
       
       console.log("ProviderBookings: Confirmed provider role");
 
-      // Get the cars belonging to the provider
+      // Get the cars belonging to the provider with more detailed logging
       const { data: cars, error: carsError } = await supabase
         .from("cars")
-        .select("id, model")
+        .select("id, model, provider_id")
         .eq("provider_id", user.id);
 
       if (carsError) {
@@ -78,9 +77,9 @@ export const ProviderBookings = () => {
       }, {} as Record<string, string>);
 
       const carIds = cars.map(car => car.id);
-      console.log("ProviderBookings: Car IDs:", carIds);
+      console.log("ProviderBookings: Car IDs to search for bookings:", carIds);
 
-      // Get bookings for these cars
+      // Get bookings for these cars with more detailed query
       const { data: bookingsData, error: bookingsError } = await supabase
         .from("bookings")
         .select(`
@@ -93,15 +92,14 @@ export const ProviderBookings = () => {
           customer_id,
           profiles:customer_id(full_name)
         `)
-        .in("car_id", carIds)
-        .order("start_date", { ascending: false });
+        .in("car_id", carIds);
 
       if (bookingsError) {
         console.error("ProviderBookings: Error fetching bookings:", bookingsError);
         throw bookingsError;
       }
 
-      console.log("ProviderBookings: Fetched bookings:", bookingsData);
+      console.log("ProviderBookings: Raw bookings data:", bookingsData);
 
       // Add car model information to each booking
       const bookingsWithCarModel = bookingsData?.map(booking => ({
@@ -110,7 +108,7 @@ export const ProviderBookings = () => {
         customer_name: booking.profiles?.full_name || "Unknown Customer"
       })) || [];
 
-      console.log("ProviderBookings: Processed bookings:", bookingsWithCarModel);
+      console.log("ProviderBookings: Processed bookings with car models:", bookingsWithCarModel);
       setBookings(bookingsWithCarModel);
     } catch (error: any) {
       console.error("Error fetching provider bookings:", error);
