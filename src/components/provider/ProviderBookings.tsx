@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,21 +11,34 @@ import { Button } from "@/components/ui/button";
 export const ProviderBookings = () => {
   const [bookings, setBookings] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     fetchBookings();
+    
+    // Set up an interval to refresh bookings every minute
+    const refreshInterval = setInterval(() => {
+      fetchBookings(false); // Silent refresh
+    }, 60000);
+    
+    return () => clearInterval(refreshInterval);
   }, []);
 
-  const fetchBookings = async () => {
+  const fetchBookings = async (showLoadingState = true) => {
     try {
-      setIsLoading(true);
+      if (showLoadingState) {
+        setIsLoading(true);
+      } else {
+        setIsRefreshing(true);
+      }
       console.log("ProviderBookings: Fetching bookings");
       
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         console.log("ProviderBookings: No authenticated user found");
         setIsLoading(false);
+        setIsRefreshing(false);
         return;
       }
       
@@ -45,6 +59,7 @@ export const ProviderBookings = () => {
       if (providerProfile?.role !== "provider") {
         console.log("ProviderBookings: User is not a provider", providerProfile);
         setIsLoading(false);
+        setIsRefreshing(false);
         return;
       }
       
@@ -66,6 +81,7 @@ export const ProviderBookings = () => {
       if (!cars || cars.length === 0) {
         console.log("ProviderBookings: No cars found for this provider");
         setIsLoading(false);
+        setIsRefreshing(false);
         setBookings([]);
         return;
       }
@@ -89,10 +105,12 @@ export const ProviderBookings = () => {
           end_date,
           status,
           total_amount,
+          created_at,
           customer_id,
           profiles:customer_id(full_name)
         `)
-        .in("car_id", carIds);
+        .in("car_id", carIds)
+        .order('created_at', { ascending: false });
 
       if (bookingsError) {
         console.error("ProviderBookings: Error fetching bookings:", bookingsError);
@@ -100,6 +118,11 @@ export const ProviderBookings = () => {
       }
 
       console.log("ProviderBookings: Raw bookings data:", bookingsData);
+      console.log("ProviderBookings: Total bookings found:", bookingsData?.length || 0);
+      
+      // Log confirmed bookings specifically
+      const confirmedBookings = bookingsData?.filter(booking => booking.status === 'confirmed') || [];
+      console.log("ProviderBookings: Confirmed bookings:", confirmedBookings.length);
 
       // Add car model information to each booking
       const bookingsWithCarModel = bookingsData?.map(booking => ({
@@ -119,6 +142,7 @@ export const ProviderBookings = () => {
       });
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   };
 
@@ -165,9 +189,9 @@ export const ProviderBookings = () => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold">Recent Bookings</h2>
-        <Button size="sm" variant="outline" onClick={handleRefresh}>
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Refresh
+        <Button size="sm" variant="outline" onClick={handleRefresh} disabled={isRefreshing}>
+          <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+          {isRefreshing ? 'Refreshing...' : 'Refresh'}
         </Button>
       </div>
       {bookings.map((booking) => (

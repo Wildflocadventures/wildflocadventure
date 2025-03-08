@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { User, Phone, Mail, MapPin, Building2, Home, Heart, UserRound } from "lucide-react";
+import { User, Phone, Mail, MapPin, Building2, Home, Heart, UserRound, Check, ArrowRight } from "lucide-react";
 
 interface LocationState {
   bookingId: string;
@@ -18,6 +18,7 @@ const CustomerDetailsForm = () => {
   const { toast } = useToast();
   const location = useLocation();
   const { bookingId } = location.state as LocationState;
+  const [paymentConfirmed, setPaymentConfirmed] = useState(false);
 
   const [formData, setFormData] = useState({
     full_name: "",
@@ -64,20 +65,13 @@ const CustomerDetailsForm = () => {
 
       if (detailsError) throw detailsError;
 
-      // Then update booking status to confirmed (simulating payment confirmation)
-      const { error: bookingError } = await supabase
-        .from("bookings")
-        .update({ status: 'confirmed' })
-        .eq('id', bookingId);
-
-      if (bookingError) throw bookingError;
-
+      // Mark payment as confirmed but don't update booking status yet
+      setPaymentConfirmed(true);
+      
       toast({
-        title: "Booking Confirmed!",
-        description: "Your details have been saved and booking is confirmed.",
+        title: "Payment Confirmed!",
+        description: "Payment processed successfully. Please click 'Book Now' to complete your booking.",
       });
-
-      navigate("/customer/bookings");
     } catch (error: any) {
       console.error("Error in customer details submission:", error);
       toast({
@@ -87,6 +81,61 @@ const CustomerDetailsForm = () => {
       });
     }
   };
+
+  const finalizeBooking = async () => {
+    try {
+      // Update booking status to confirmed
+      const { error: bookingError } = await supabase
+        .from("bookings")
+        .update({ status: 'confirmed' })
+        .eq('id', bookingId);
+
+      if (bookingError) throw bookingError;
+
+      toast({
+        title: "Booking Confirmed!",
+        description: "Your booking has been finalized and confirmed.",
+      });
+
+      navigate("/customer/bookings");
+    } catch (error: any) {
+      console.error("Error finalizing booking:", error);
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (paymentConfirmed) {
+    return (
+      <div className="container max-w-3xl mx-auto py-8 px-4">
+        <Card className="backdrop-blur-sm bg-white/50">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl font-bold text-gray-900">Payment Confirmed</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col items-center justify-center py-8">
+            <div className="bg-green-100 rounded-full p-4 mb-6">
+              <Check className="h-12 w-12 text-green-600" />
+            </div>
+            <h3 className="text-xl font-semibold mb-3">Your payment has been processed successfully</h3>
+            <p className="text-gray-600 mb-8 text-center">
+              To finalize your booking, please click the "Book Now" button below. 
+              Once confirmed, your booking will be visible to the service provider.
+            </p>
+            <Button 
+              onClick={finalizeBooking}
+              className="w-2/3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center gap-2"
+              size="lg"
+            >
+              Book Now <ArrowRight className="h-5 w-5" />
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="container max-w-3xl mx-auto py-8 px-4">
@@ -231,7 +280,7 @@ const CustomerDetailsForm = () => {
               type="submit"
               className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-300"
             >
-              Submit Details
+              Confirm Payment
             </Button>
           </form>
         </CardContent>

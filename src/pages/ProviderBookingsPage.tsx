@@ -1,7 +1,8 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CalendarDays, Car, ArrowLeft } from "lucide-react";
+import { CalendarDays, Car, ArrowLeft, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -12,6 +13,7 @@ import { useAuthProfile } from "@/hooks/useAuthProfile";
 const ProviderBookingsPage = () => {
   const [bookings, setBookings] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   // Use the hook to ensure we're authenticated
@@ -21,12 +23,23 @@ const ProviderBookingsPage = () => {
     if (session?.user) {
       console.log("ProviderBookingsPage: User session found, fetching bookings");
       fetchBookings();
+
+      // Set up an interval to refresh bookings every 30 seconds
+      const refreshInterval = setInterval(() => {
+        fetchBookings(false); // Refresh quietly without loading state
+      }, 30000);
+
+      return () => clearInterval(refreshInterval);
     }
   }, [session]);
 
-  const fetchBookings = async () => {
+  const fetchBookings = async (showLoadingState = true) => {
     try {
-      setIsLoading(true);
+      if (showLoadingState) {
+        setIsLoading(true);
+      } else {
+        setIsRefreshing(true);
+      }
       console.log("ProviderBookingsPage: Fetching bookings");
       
       if (!session?.user) {
@@ -52,7 +65,6 @@ const ProviderBookingsPage = () => {
 
       if (!cars || cars.length === 0) {
         console.log("ProviderBookingsPage: No cars found for this provider");
-        setIsLoading(false);
         setBookings([]);
         return;
       }
@@ -77,9 +89,11 @@ const ProviderBookingsPage = () => {
           end_date,
           status,
           total_amount,
+          created_at,
           profiles:customer_id(full_name)
         `)
-        .in("car_id", carIds);
+        .in("car_id", carIds)
+        .order('created_at', { ascending: false });
 
       if (bookingsError) {
         console.error("ProviderBookingsPage: Error fetching bookings:", bookingsError);
@@ -87,6 +101,10 @@ const ProviderBookingsPage = () => {
       }
 
       console.log("ProviderBookingsPage: Raw bookings data:", bookingsData);
+      
+      // Check for confirmed bookings specifically
+      const confirmedBookings = bookingsData?.filter(booking => booking.status === 'confirmed') || [];
+      console.log("ProviderBookingsPage: Confirmed bookings:", confirmedBookings.length);
 
       // Add car model information to each booking
       const bookingsWithCarModel = bookingsData?.map(booking => ({
@@ -97,6 +115,13 @@ const ProviderBookingsPage = () => {
 
       console.log("ProviderBookingsPage: Processed bookings with models:", bookingsWithCarModel);
       setBookings(bookingsWithCarModel);
+      
+      if (!showLoadingState && bookingsWithCarModel.length > 0) {
+        toast({
+          title: "Updated",
+          description: `Refreshed bookings: ${bookingsWithCarModel.length} total, ${confirmedBookings.length} confirmed`,
+        });
+      }
     } catch (error: any) {
       console.error("Error fetching provider bookings:", error);
       toast({
@@ -106,13 +131,13 @@ const ProviderBookingsPage = () => {
       });
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   };
 
   // Function to manually refresh bookings
   const refreshBookings = () => {
-    setIsLoading(true);
-    fetchBookings();
+    fetchBookings(true);
   };
 
   return (
@@ -121,11 +146,12 @@ const ProviderBookingsPage = () => {
         <h1 className="text-3xl font-bold">Car Bookings Dashboard</h1>
         <div className="flex gap-2">
           <Button 
-            onClick={() => fetchBookings()}
+            onClick={refreshBookings}
             className="flex items-center gap-2"
-            disabled={isLoading}
+            disabled={isLoading || isRefreshing}
           >
-            {isLoading ? "Refreshing..." : "Refresh Bookings"}
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            {isLoading ? "Loading..." : isRefreshing ? "Refreshing..." : "Refresh Bookings"}
           </Button>
           <Button 
             variant="outline" 
