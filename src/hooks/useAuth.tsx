@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -23,7 +24,8 @@ export const useAuth = (options: AuthOptions = { redirectIfNotAuthenticated: fal
       setSession(session);
       if (session?.user?.id) {
         fetchUserProfile(session.user.id);
-      } else if (options.redirectIfNotAuthenticated && location.pathname !== '/') {
+      } else if (options.redirectIfNotAuthenticated && location.pathname !== '/' && location.pathname !== '/auth') {
+        // Only redirect if not on the home page or auth page
         console.log("useAuth: Redirecting to auth");
         navigate('/auth');
       }
@@ -38,7 +40,8 @@ export const useAuth = (options: AuthOptions = { redirectIfNotAuthenticated: fal
         fetchUserProfile(session.user.id);
       } else {
         setUserProfile(null);
-        if (options.redirectIfNotAuthenticated && location.pathname !== '/') {
+        if (options.redirectIfNotAuthenticated && location.pathname !== '/' && location.pathname !== '/auth') {
+          // Only redirect if not on the home page or auth page
           console.log("useAuth: Redirecting to auth on state change");
           navigate('/auth');
         }

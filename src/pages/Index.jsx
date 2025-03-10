@@ -8,6 +8,7 @@ import { CarListings } from "@/components/car-listing/CarListings";
 import { useAuthProfile } from "@/hooks/useAuthProfile";
 
 const Index = () => {
+  // Explicitly set redirectIfNotAuthenticated to false for the home page
   const { session, userProfile, handleLogout } = useAuthProfile({ redirectIfNotAuthenticated: false });
   const [selectedDates, setSelectedDates] = useState(() => {
     const savedDates = localStorage.getItem('selectedDates');
