@@ -1,20 +1,20 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Profile } from "@/types/supabase";
 
 export interface AuthOptions {
   redirectIfNotAuthenticated?: boolean;
 }
 
-export const useAuth = (options: AuthOptions = { redirectIfNotAuthenticated: true }) => {
+export const useAuth = (options: AuthOptions = { redirectIfNotAuthenticated: false }) => {
   const [session, setSession] = useState<any>(null);
   const [userProfile, setUserProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     console.log("useAuth: Initializing");
@@ -23,7 +23,7 @@ export const useAuth = (options: AuthOptions = { redirectIfNotAuthenticated: tru
       setSession(session);
       if (session?.user?.id) {
         fetchUserProfile(session.user.id);
-      } else if (options.redirectIfNotAuthenticated) {
+      } else if (options.redirectIfNotAuthenticated && location.pathname !== '/') {
         console.log("useAuth: Redirecting to auth");
         navigate('/auth');
       }
@@ -38,7 +38,7 @@ export const useAuth = (options: AuthOptions = { redirectIfNotAuthenticated: tru
         fetchUserProfile(session.user.id);
       } else {
         setUserProfile(null);
-        if (options.redirectIfNotAuthenticated) {
+        if (options.redirectIfNotAuthenticated && location.pathname !== '/') {
           console.log("useAuth: Redirecting to auth on state change");
           navigate('/auth');
         }
@@ -46,7 +46,7 @@ export const useAuth = (options: AuthOptions = { redirectIfNotAuthenticated: tru
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate, options.redirectIfNotAuthenticated]);
+  }, [navigate, options.redirectIfNotAuthenticated, location.pathname]);
 
   const fetchUserProfile = async (userId: string) => {
     try {

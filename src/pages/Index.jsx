@@ -8,7 +8,7 @@ import { CarListings } from "@/components/car-listing/CarListings";
 import { useAuthProfile } from "@/hooks/useAuthProfile";
 
 const Index = () => {
-  const { session, userProfile, handleLogout } = useAuthProfile();
+  const { session, userProfile, handleLogout } = useAuthProfile({ redirectIfNotAuthenticated: false });
   const [selectedDates, setSelectedDates] = useState(() => {
     const savedDates = localStorage.getItem('selectedDates');
     if (savedDates) {
