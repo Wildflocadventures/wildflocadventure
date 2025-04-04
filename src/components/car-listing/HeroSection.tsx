@@ -20,11 +20,11 @@ export const HeroSection = ({
 }: HeroSectionProps) => {
   return (
     <div className="relative h-screen">
-      {/* Main Background Image - Using the traffic intersection image */}
+      {/* Main Background Image */}
       <div 
         className="absolute inset-0 z-0" 
         style={{
-          backgroundImage: "url('/lovable-uploads/3cf68acf-aca7-4d57-a4f7-f48569f045cc.png')",
+          backgroundImage: "url('/michal-balog-584Hace7MKQ-unsplash.jpg')",
           backgroundSize: "cover",
           backgroundPosition: "center",
           filter: "brightness(0.6)"
