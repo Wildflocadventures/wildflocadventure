@@ -1,5 +1,6 @@
 
 import { SearchForm } from "@/components/car-listing/SearchForm";
+import { Button } from "@/components/ui/button";
 
 interface HeroSectionProps {
   location: string;
@@ -23,7 +24,7 @@ export const HeroSection = ({
       <div 
         className="absolute inset-0 z-0" 
         style={{
-          backgroundImage: "url('/lovable-uploads/f7c15857-c693-4797-a812-07e78f0f43ac.png')",
+          backgroundImage: "url('/lovable-uploads/acc0d00d-6a78-4a1b-92c5-86b40f7716ca.png')",
           backgroundSize: "cover",
           backgroundPosition: "center",
           filter: "brightness(0.7)"
@@ -41,16 +42,16 @@ export const HeroSection = ({
             carefully crafted travel experiences.
           </p>
           
-          <button
+          <Button
             onClick={() => {
               document.getElementById('search-form')?.scrollIntoView({ behavior: 'smooth' });
             }}
-            className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-8 rounded-md text-lg transition-colors mb-10"
+            className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-8 rounded-md text-lg transition-colors"
           >
             Start Your Journey
-          </button>
+          </Button>
           
-          <div id="search-form" className="mt-8">
+          <div id="search-form" className="mt-16">
             <SearchForm
               location={location}
               setLocation={setLocation}

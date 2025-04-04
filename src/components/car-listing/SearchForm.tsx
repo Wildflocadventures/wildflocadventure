@@ -16,7 +16,7 @@ interface SearchFormProps {
 
 export const SearchForm = ({ location, setLocation, selectedDates, setSelectedDates }: SearchFormProps) => {
   return (
-    <Card className="max-w-4xl mx-auto bg-white/95 backdrop-blur-sm shadow-xl p-8 rounded-lg">
+    <Card className="max-w-4xl mx-auto bg-white/90 backdrop-blur-sm shadow-xl p-6 rounded-lg">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
           <label className="text-sm font-medium text-gray-700 flex items-center">

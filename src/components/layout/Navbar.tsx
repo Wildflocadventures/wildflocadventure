@@ -1,10 +1,7 @@
 
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { LogIn, UserPlus, LogOut, Car, List, Calendar, Users } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import logo from './logomaa.png';
+import { Home, MapPin, Star, Info, Phone } from "lucide-react";
 
 interface NavbarProps {
   session: any;
@@ -13,125 +10,76 @@ interface NavbarProps {
 
 export const Navbar = ({ session, userProfile }: NavbarProps) => {
   const navigate = useNavigate();
-  const { toast } = useToast();
 
   const handleLogin = () => {
     navigate("/auth");
-  };
-
-  const handleProviderLogin = () => {
-    navigate("/provider/auth");
-  };
-
-  const handleProviderDashboard = () => {
-    navigate("/provider/dashboard");
   };
 
   const handleSignup = () => {
     navigate("/auth?tab=register");
   };
 
-  const handleProviderSignup = () => {
-    navigate("/provider/auth?tab=register");
-  };
-
-  const handleLogout = async () => {
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      
-      toast({
-        title: "Success",
-        description: "Logged out successfully",
-      });
-      navigate('/');
-    } catch (error: any) {
-      console.error("Logout error:", error);
-      toast({
-        title: "Error",
-        description: "Failed to logout",
-        variant: "destructive",
-      });
-    }
-  };
-
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-sm border-b">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16 items-center">
-          <div className="flex-shrink-0 cursor-pointer" onClick={() => navigate('/')}>
-            <img src={logo} alt="Logo" className="h-12 w-auto mr-4" />
-          </div>
-          
-          <div className="flex gap-4">
-            {!session ? (
-              <>
-                <Button
-                  variant="outline"
-                  onClick={handleLogin}
-                  className="flex items-center gap-2"
-                >
-                  <LogIn className="w-4 h-4" />
-                  Customer Login
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={handleProviderLogin}
-                  className="flex items-center gap-2"
-                >
-                  <Users className="w-4 h-4" />
-                  Provider Login
-                </Button>
-                <Button
-                  onClick={handleSignup}
-                  className="flex items-center gap-2"
-                >
-                  <UserPlus className="w-4 h-4" />
-                  Sign Up
-                </Button>
-              </>
-            ) : (
-              <>
-                {userProfile?.role === 'provider' ? (
-                  <>
-                    <Button
-                      variant="outline"
-                      onClick={handleProviderDashboard}
-                      className="flex items-center gap-2"
-                    >
-                      <Car className="w-4 h-4" />
-                      Dashboard
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => navigate('/provider/bookings')}
-                      className="flex items-center gap-2"
-                    >
-                      <Calendar className="w-4 h-4" />
-                      Bookings
-                    </Button>
-                  </>
-                ) : (
-                  <Button
-                    variant="outline"
-                    onClick={() => navigate('/customer/bookings')}
-                    className="flex items-center gap-2"
-                  >
-                    <List className="w-4 h-4" />
-                    My Bookings
-                  </Button>
-                )}
-                <Button
-                  variant="outline"
-                  onClick={handleLogout}
-                  className="flex items-center gap-2"
-                >
-                  <LogOut className="w-4 h-4" />
-                  Logout
-                </Button>
-              </>
-            )}
-          </div>
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-sm px-4 py-3">
+      <div className="max-w-7xl mx-auto flex justify-between items-center">
+        <div className="flex items-center">
+          <h1 
+            className="text-2xl font-bold text-white cursor-pointer" 
+            onClick={() => navigate('/')}
+          >
+            WILDFLOC
+          </h1>
+        </div>
+        
+        <div className="hidden md:flex space-x-8">
+          <a href="#" className="text-white hover:text-gray-300 font-medium flex items-center">
+            <Home className="w-4 h-4 mr-1" />
+            Home
+          </a>
+          <a href="#" className="text-white hover:text-gray-300 font-medium flex items-center">
+            <MapPin className="w-4 h-4 mr-1" />
+            Activities
+          </a>
+          <a href="#" className="text-white hover:text-gray-300 font-medium flex items-center">
+            <Star className="w-4 h-4 mr-1" />
+            Features
+          </a>
+          <a href="#" className="text-white hover:text-gray-300 font-medium flex items-center">
+            <Info className="w-4 h-4 mr-1" />
+            About
+          </a>
+          <a href="#" className="text-white hover:text-gray-300 font-medium flex items-center">
+            <Phone className="w-4 h-4 mr-1" />
+            Contact
+          </a>
+        </div>
+        
+        <div className="flex space-x-3">
+          {!session ? (
+            <>
+              <Button 
+                variant="outline" 
+                className="border-red-600 text-white hover:bg-red-600"
+                onClick={handleLogin}
+              >
+                Login
+              </Button>
+              <Button 
+                className="bg-orange-500 hover:bg-orange-600 text-white"
+                onClick={handleSignup}
+              >
+                Sign Up
+              </Button>
+            </>
+          ) : (
+            <Button
+              variant="outline"
+              className="border-red-600 text-white hover:bg-red-600"
+              onClick={() => navigate('/customer/bookings')}
+            >
+              My Bookings
+            </Button>
+          )}
         </div>
       </div>
     </nav>
