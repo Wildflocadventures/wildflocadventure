@@ -20,7 +20,7 @@ export const HeroSection = ({
 }: HeroSectionProps) => {
   return (
     <div className="relative h-screen">
-      {/* Background Image */}
+      {/* Main Background Image */}
       <div 
         className="absolute inset-0 z-0" 
         style={{
@@ -42,14 +42,28 @@ export const HeroSection = ({
             carefully crafted travel experiences.
           </p>
           
-          <Button
-            onClick={() => {
-              document.getElementById('search-form')?.scrollIntoView({ behavior: 'smooth' });
-            }}
-            className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-8 rounded-md text-lg transition-colors"
-          >
-            Start Your Journey
-          </Button>
+          <div className="relative">
+            {/* Traffic Image behind button */}
+            <div 
+              className="absolute -top-24 left-1/2 transform -translate-x-1/2 w-64 h-64 md:w-80 md:h-80 rounded-full overflow-hidden opacity-70 z-0"
+              style={{
+                backgroundImage: "url('/lovable-uploads/0b1392bf-e71c-4151-a4ba-e622ca276bbe.png')",
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+                boxShadow: "0 0 20px rgba(0,0,0,0.4)"
+              }}
+            />
+            
+            {/* Button with higher z-index */}
+            <Button
+              onClick={() => {
+                document.getElementById('search-form')?.scrollIntoView({ behavior: 'smooth' });
+              }}
+              className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-8 rounded-md text-lg transition-colors relative z-10"
+            >
+              Start Your Journey
+            </Button>
+          </div>
           
           <div id="search-form" className="mt-16">
             <SearchForm
