@@ -18,6 +18,7 @@ import Activities from "@/pages/Activities";
 import Features from "@/pages/Features";
 import About from "@/pages/About";
 import Contact from "@/pages/Contact";
+import CarRentals from "@/pages/CarRentals";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -103,6 +104,7 @@ function App() {
               <Route path="/features" element={<Features />} />
               <Route path="/about" element={<About />} />
               <Route path="/contact" element={<Contact />} />
+              <Route path="/car-rentals" element={<CarRentals />} />
               {/* Redirect any other paths to the main page */}
               <Route path="*" element={<Navigate replace to="/" />} />
             </Routes>

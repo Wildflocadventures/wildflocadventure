@@ -1,7 +1,7 @@
 
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Home, MapPin, Star, Info, Phone } from "lucide-react";
+import { Home, MapPin, Star, Info, Phone, Car } from "lucide-react";
 
 interface NavbarProps {
   session: any;
@@ -38,6 +38,13 @@ export const Navbar = ({ session, userProfile }: NavbarProps) => {
           >
             <Home className="w-4 h-4 mr-1" />
             Home
+          </a>
+          <a 
+            onClick={() => navigate('/car-rentals')} 
+            className="text-white hover:text-gray-300 font-medium flex items-center cursor-pointer"
+          >
+            <Car className="w-4 h-4 mr-1" />
+            Car Rentals
           </a>
           <a 
             onClick={() => navigate('/activities')} 
