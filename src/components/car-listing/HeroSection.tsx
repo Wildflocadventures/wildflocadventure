@@ -1,5 +1,4 @@
 
-import { SearchForm } from "@/components/car-listing/SearchForm";
 import { Button } from "@/components/ui/button";
 
 interface HeroSectionProps {
@@ -50,15 +49,6 @@ export const HeroSection = ({
           >
             Start Your Journey
           </Button>
-          
-          <div id="search-form" className="mt-16">
-            <SearchForm
-              location={location}
-              setLocation={setLocation}
-              selectedDates={selectedDates}
-              setSelectedDates={setSelectedDates}
-            />
-          </div>
         </div>
       </div>
     </div>
