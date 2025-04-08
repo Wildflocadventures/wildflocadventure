@@ -23,12 +23,12 @@ export const Navbar = ({ session, userProfile }: NavbarProps) => {
     <nav className="fixed top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-sm px-4 py-3">
       <div className="max-w-7xl mx-auto flex justify-between items-center">
         <div className="flex items-center">
-          <h1 
-            className="text-2xl font-bold text-white cursor-pointer" 
+          <img 
+            src="/Wildfloc.png" 
+            alt="WILDFLOC" 
+            className="h-10 cursor-pointer"
             onClick={() => navigate('/')}
-          >
-            WILDFLOC
-          </h1>
+          />
         </div>
         
         <div className="hidden md:flex space-x-8">
