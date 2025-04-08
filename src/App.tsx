@@ -14,6 +14,10 @@ import CustomerBookings from "@/pages/CustomerBookings";
 import ProviderDashboard from "@/pages/ProviderDashboard";
 import CustomerDetailsForm from "@/pages/CustomerDetailsForm";
 import ProviderBookingsPage from "@/pages/ProviderBookingsPage";
+import Activities from "@/pages/Activities";
+import Features from "@/pages/Features";
+import About from "@/pages/About";
+import Contact from "@/pages/Contact";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -94,6 +98,11 @@ function App() {
               <Route path="/provider/bookings" element={<ProviderBookingsPage />} />
               <Route path="/customer/bookings" element={<CustomerBookings />} />
               <Route path="/customer/details" element={<CustomerDetailsForm />} />
+              {/* New routes */}
+              <Route path="/activities" element={<Activities />} />
+              <Route path="/features" element={<Features />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/contact" element={<Contact />} />
               {/* Redirect any other paths to the main page */}
               <Route path="*" element={<Navigate replace to="/" />} />
             </Routes>

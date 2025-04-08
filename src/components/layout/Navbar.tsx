@@ -32,23 +32,38 @@ export const Navbar = ({ session, userProfile }: NavbarProps) => {
         </div>
         
         <div className="hidden md:flex space-x-8">
-          <a href="#" className="text-white hover:text-gray-300 font-medium flex items-center">
+          <a 
+            onClick={() => navigate('/')} 
+            className="text-white hover:text-gray-300 font-medium flex items-center cursor-pointer"
+          >
             <Home className="w-4 h-4 mr-1" />
             Home
           </a>
-          <a href="#" className="text-white hover:text-gray-300 font-medium flex items-center">
+          <a 
+            onClick={() => navigate('/activities')} 
+            className="text-white hover:text-gray-300 font-medium flex items-center cursor-pointer"
+          >
             <MapPin className="w-4 h-4 mr-1" />
             Activities
           </a>
-          <a href="#" className="text-white hover:text-gray-300 font-medium flex items-center">
+          <a 
+            onClick={() => navigate('/features')} 
+            className="text-white hover:text-gray-300 font-medium flex items-center cursor-pointer"
+          >
             <Star className="w-4 h-4 mr-1" />
             Features
           </a>
-          <a href="#" className="text-white hover:text-gray-300 font-medium flex items-center">
+          <a 
+            onClick={() => navigate('/about')} 
+            className="text-white hover:text-gray-300 font-medium flex items-center cursor-pointer"
+          >
             <Info className="w-4 h-4 mr-1" />
             About
           </a>
-          <a href="#" className="text-white hover:text-gray-300 font-medium flex items-center">
+          <a 
+            onClick={() => navigate('/contact')} 
+            className="text-white hover:text-gray-300 font-medium flex items-center cursor-pointer"
+          >
             <Phone className="w-4 h-4 mr-1" />
             Contact
           </a>
