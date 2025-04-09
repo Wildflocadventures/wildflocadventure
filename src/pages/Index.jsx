@@ -51,7 +51,7 @@ const Index = () => {
   }, [session]);
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-black">
       <Navbar session={session} userProfile={userProfile} />
       
       <HeroSection
