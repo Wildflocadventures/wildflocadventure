@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Helicopter, Navigation, Scissors, Car, Waves, Brush, Mountain, Factory, Users } from "lucide-react";
+import { Plane, Navigation, Scissors, Car, Waves, Brush, Mountain, Factory, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const ActivityCard = ({ 
@@ -46,7 +46,7 @@ const Activities = () => {
       title: "Chopper Ride",
       description: "Experience the thrill of a chopper ride over the city.",
       price: "29,900",
-      icon: Helicopter,
+      icon: Plane,
       imageUrl: "https://images.unsplash.com/photo-1487252665478-49b61b47f302?auto=format&fit=crop&q=80&w=800&h=450"
     },
     {
