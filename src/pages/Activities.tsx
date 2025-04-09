@@ -1,8 +1,9 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Plane, Navigation, Scissors, Car, Waves, Brush, Mountain, Factory, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const ActivityCard = ({ 
   title, 
@@ -19,10 +20,21 @@ const ActivityCard = ({
   imageUrl: string;
   id: string;
 }) => {
+  const [isLoading, setIsLoading] = useState(true);
+
   return (
     <div className="bg-black/95 rounded-lg overflow-hidden shadow-xl">
       <div className="h-48 relative">
-        <img src={imageUrl} alt={title} className="w-full h-full object-cover" />
+        {isLoading && (
+          <Skeleton className="w-full h-full absolute inset-0 bg-gray-800" />
+        )}
+        <img 
+          src={imageUrl} 
+          alt={title} 
+          className="w-full h-full object-cover" 
+          onLoad={() => setIsLoading(false)}
+          style={{ opacity: isLoading ? 0 : 1 }}
+        />
       </div>
       <div className="p-6 text-white">
         <div className="flex items-center gap-2 mb-2">
