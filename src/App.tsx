@@ -15,6 +15,7 @@ import ProviderDashboard from "@/pages/ProviderDashboard";
 import CustomerDetailsForm from "@/pages/CustomerDetailsForm";
 import ProviderBookingsPage from "@/pages/ProviderBookingsPage";
 import Activities from "@/pages/Activities";
+import ActivityDetails from "@/pages/ActivityDetails";
 import Features from "@/pages/Features";
 import About from "@/pages/About";
 import Contact from "@/pages/Contact";
@@ -99,8 +100,9 @@ function App() {
               <Route path="/provider/bookings" element={<ProviderBookingsPage />} />
               <Route path="/customer/bookings" element={<CustomerBookings />} />
               <Route path="/customer/details" element={<CustomerDetailsForm />} />
-              {/* New routes */}
+              {/* Activities routes */}
               <Route path="/activities" element={<Activities />} />
+              <Route path="/activity/:id" element={<ActivityDetails />} />
               <Route path="/features" element={<Features />} />
               <Route path="/about" element={<About />} />
               <Route path="/contact" element={<Contact />} />
