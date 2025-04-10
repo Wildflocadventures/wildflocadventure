@@ -7,7 +7,7 @@ export const ServiceSection: React.FC = () => {
     {
       title: "Things to do in Kashmir",
       description: "Explore exciting activities and adventures in Kashmir",
-      imageUrl: "/lovable-uploads/02ba5aa3-0f80-407f-812f-febb7743b56d.png",
+      imageUrl: "/public/Kashmir.jpg",
       linkTo: "/activities",
       overlayText: {
         title: "KASHMIR",
