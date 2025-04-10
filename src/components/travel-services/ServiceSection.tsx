@@ -7,9 +7,11 @@ export const ServiceSection: React.FC = () => {
     {
       title: "Things to do in Kashmir",
       description: "Explore exciting activities and adventures in Kashmir",
-      imageUrl: "/public/Kashmir.jpg",
+      imageUrl: "/lovable-uploads/02ba5aa3-0f80-407f-812f-febb7743b56d.png",
       linkTo: "/activities",
-      
+      overlayText: {
+        title: "KASHMIR",
+        subtitle: "PLACES TO VISIT, THINGS TO DO & TRAVEL GUIDE"
       }
     },
     {
