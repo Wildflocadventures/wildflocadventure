@@ -1,3 +1,4 @@
+
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -44,6 +45,8 @@ const CarDetails = () => {
         throw error;
       }
       if (!data) throw new Error("Car not found");
+      
+      console.log("Car data with provider:", data);
       return data;
     },
     enabled: Boolean(id),

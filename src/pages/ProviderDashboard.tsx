@@ -11,6 +11,7 @@ import { Car, Upload, Pencil, ImagePlus, Calendar as CalendarIcon } from "lucide
 import { format } from "date-fns";
 import { ProviderBookings } from "@/components/provider/ProviderBookings";
 import { useNavigate } from "react-router-dom";
+import { useProviderAuth } from "@/hooks/useProviderAuth"; // Add this import
 
 const ProviderDashboard = () => {
   const { toast } = useToast();
@@ -25,6 +26,9 @@ const ProviderDashboard = () => {
     rate_per_day: "",
     description: ""
   });
+  
+  // Use the provider auth hook to get the current provider's session and user ID
+  const { session } = useProviderAuth({ redirectIfNotAuthenticated: true });
 
   const [selectedDates, setSelectedDates] = useState<{
     from: Date | undefined;
@@ -40,6 +44,12 @@ const ProviderDashboard = () => {
   }, []);
 
   const fetchCars = async () => {
+    // Make sure we have a session
+    if (!session?.user?.id) {
+      console.log("No user session found when fetching cars");
+      return;
+    }
+    
     const { data: cars, error } = await supabase
       .from("cars")
       .select(`
@@ -49,9 +59,11 @@ const ProviderDashboard = () => {
           end_date,
           is_available
         )
-      `);
+      `)
+      .eq("provider_id", session.user.id); // Filter by current provider ID
 
     if (error) {
+      console.error("Error fetching cars:", error);
       toast({
         title: "Error",
         description: "Failed to fetch cars",
@@ -63,6 +75,17 @@ const ProviderDashboard = () => {
   };
 
   const handleAddCar = async () => {
+    // Check if we have a session with user ID
+    if (!session?.user?.id) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to add a car",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Include provider_id in the car data
     const { data: carData, error: carError } = await supabase
       .from("cars")
       .insert({
@@ -71,12 +94,14 @@ const ProviderDashboard = () => {
         license_plate: newCar.license_plate,
         seats: parseInt(newCar.seats),
         rate_per_day: parseFloat(newCar.rate_per_day),
-        description: newCar.description
+        description: newCar.description,
+        provider_id: session.user.id // Add provider_id from the session
       })
       .select()
       .single();
 
     if (carError) {
+      console.error("Error adding car:", carError);
       toast({
         title: "Error",
         description: carError.message,
@@ -101,6 +126,14 @@ const ProviderDashboard = () => {
 
   const handleUpdateCar = async () => {
     if (!editingCar) return;
+    if (!session?.user?.id) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to update a car",
+        variant: "destructive",
+      });
+      return;
+    }
 
     const { error } = await supabase
       .from("cars")
@@ -110,11 +143,13 @@ const ProviderDashboard = () => {
         license_plate: editingCar.license_plate,
         seats: parseInt(editingCar.seats),
         rate_per_day: parseFloat(editingCar.rate_per_day),
-        description: editingCar.description
+        description: editingCar.description,
+        provider_id: session.user.id // Ensure provider_id is set on updates too
       })
       .eq("id", editingCar.id);
 
     if (error) {
+      console.error("Error updating car:", error);
       toast({
         title: "Error",
         description: "Failed to update car",
