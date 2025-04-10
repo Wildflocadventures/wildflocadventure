@@ -45,8 +45,6 @@ const CarDetails = () => {
         throw error;
       }
       if (!data) throw new Error("Car not found");
-      
-      console.log("Car data with provider:", data);
       return data;
     },
     enabled: Boolean(id),
@@ -91,45 +89,26 @@ const CarDetails = () => {
       return;
     }
 
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "Please login to book a car",
+        variant: "destructive",
+      });
+      navigate("/auth");
+      return;
+    }
+
+    const days = Math.ceil((selectedDates.to.getTime() - selectedDates.from.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    const totalAmount = days * car.rate_per_day;
+
     try {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      
-      if (userError || !user) {
-        console.error("Auth error:", userError);
-        toast({
-          title: "Error",
-          description: "Please login to book a car",
-          variant: "destructive",
-        });
-        navigate("/auth");
-        return;
-      }
-
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("id", user.id)
-        .single();
-
-      if (profileError || !profile) {
-        console.error("Profile error:", profileError);
-        toast({
-          title: "Error",
-          description: "Your user profile is not set up properly. Please contact support.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const days = Math.ceil((selectedDates.to.getTime() - selectedDates.from.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-      const totalAmount = days * car.rate_per_day;
-
-      console.log("Creating booking with customer_id:", profile.id);
-      const { data: booking, error: bookingError } = await supabase
+      const { data, error: bookingError } = await supabase
         .from("bookings")
         .insert({
           car_id: id,
-          customer_id: profile.id,
+          customer_id: user.id,
           start_date: selectedDates.from.toISOString(),
           end_date: selectedDates.to.toISOString(),
           total_amount: totalAmount,
@@ -138,10 +117,7 @@ const CarDetails = () => {
         .select()
         .single();
 
-      if (bookingError) {
-        console.error("Booking error:", bookingError);
-        throw bookingError;
-      }
+      if (bookingError) throw bookingError;
 
       toast({
         title: "Success",
@@ -149,14 +125,13 @@ const CarDetails = () => {
       });
 
       navigate("/customer/details", { 
-        state: { bookingId: booking.id }
+        state: { bookingId: data.id }
       });
       
     } catch (error) {
-      console.error("Booking creation error:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to create booking. Please try again.",
+        description: error.message,
         variant: "destructive",
       });
     }

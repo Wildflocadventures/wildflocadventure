@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
@@ -7,15 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Car, Upload, Pencil, ImagePlus, Calendar as CalendarIcon } from "lucide-react";
+import { Car, Upload, Pencil, ImagePlus } from "lucide-react";
 import { format } from "date-fns";
 import { ProviderBookings } from "@/components/provider/ProviderBookings";
-import { useNavigate } from "react-router-dom";
-import { useProviderAuth } from "@/hooks/useProviderAuth"; // Add this import
 
 const ProviderDashboard = () => {
   const { toast } = useToast();
-  const navigate = useNavigate();
   const [cars, setCars] = useState<any[]>([]);
   const [editingCar, setEditingCar] = useState<any>(null);
   const [newCar, setNewCar] = useState({
@@ -26,9 +22,6 @@ const ProviderDashboard = () => {
     rate_per_day: "",
     description: ""
   });
-  
-  // Use the provider auth hook to get the current provider's session and user ID
-  const { session } = useProviderAuth({ redirectIfNotAuthenticated: true });
 
   const [selectedDates, setSelectedDates] = useState<{
     from: Date | undefined;
@@ -44,12 +37,6 @@ const ProviderDashboard = () => {
   }, []);
 
   const fetchCars = async () => {
-    // Make sure we have a session
-    if (!session?.user?.id) {
-      console.log("No user session found when fetching cars");
-      return;
-    }
-    
     const { data: cars, error } = await supabase
       .from("cars")
       .select(`
@@ -59,11 +46,9 @@ const ProviderDashboard = () => {
           end_date,
           is_available
         )
-      `)
-      .eq("provider_id", session.user.id); // Filter by current provider ID
+      `);
 
     if (error) {
-      console.error("Error fetching cars:", error);
       toast({
         title: "Error",
         description: "Failed to fetch cars",
@@ -75,17 +60,6 @@ const ProviderDashboard = () => {
   };
 
   const handleAddCar = async () => {
-    // Check if we have a session with user ID
-    if (!session?.user?.id) {
-      toast({
-        title: "Error",
-        description: "You must be logged in to add a car",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Include provider_id in the car data
     const { data: carData, error: carError } = await supabase
       .from("cars")
       .insert({
@@ -94,14 +68,12 @@ const ProviderDashboard = () => {
         license_plate: newCar.license_plate,
         seats: parseInt(newCar.seats),
         rate_per_day: parseFloat(newCar.rate_per_day),
-        description: newCar.description,
-        provider_id: session.user.id // Add provider_id from the session
+        description: newCar.description
       })
       .select()
       .single();
 
     if (carError) {
-      console.error("Error adding car:", carError);
       toast({
         title: "Error",
         description: carError.message,
@@ -126,14 +98,6 @@ const ProviderDashboard = () => {
 
   const handleUpdateCar = async () => {
     if (!editingCar) return;
-    if (!session?.user?.id) {
-      toast({
-        title: "Error",
-        description: "You must be logged in to update a car",
-        variant: "destructive",
-      });
-      return;
-    }
 
     const { error } = await supabase
       .from("cars")
@@ -143,13 +107,11 @@ const ProviderDashboard = () => {
         license_plate: editingCar.license_plate,
         seats: parseInt(editingCar.seats),
         rate_per_day: parseFloat(editingCar.rate_per_day),
-        description: editingCar.description,
-        provider_id: session.user.id // Ensure provider_id is set on updates too
+        description: editingCar.description
       })
       .eq("id", editingCar.id);
 
     if (error) {
-      console.error("Error updating car:", error);
       toast({
         title: "Error",
         description: "Failed to update car",
@@ -255,17 +217,7 @@ const ProviderDashboard = () => {
 
   return (
     <div className="container mx-auto py-8 px-4">
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold">Provider Dashboard</h1>
-        <Button 
-          onClick={() => navigate('/provider/bookings')}
-          className="flex items-center gap-2"
-          variant="outline"
-        >
-          <CalendarIcon className="w-4 h-4" />
-          View All Bookings
-        </Button>
-      </div>
+      <h1 className="text-3xl font-bold mb-8">Provider Dashboard</h1>
       
       <div className="grid md:grid-cols-2 gap-8 mb-8">
         <Card>
