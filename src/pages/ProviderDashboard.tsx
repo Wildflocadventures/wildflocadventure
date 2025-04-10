@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
@@ -9,9 +10,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Car, Upload, Pencil, ImagePlus } from "lucide-react";
 import { format } from "date-fns";
 import { ProviderBookings } from "@/components/provider/ProviderBookings";
+import { useAuthProfile } from "@/hooks/useAuthProfile";
+import { Navigate } from "react-router-dom";
 
 const ProviderDashboard = () => {
   const { toast } = useToast();
+  const { session, userProfile, loading } = useAuthProfile();
   const [cars, setCars] = useState<any[]>([]);
   const [editingCar, setEditingCar] = useState<any>(null);
   const [newCar, setNewCar] = useState({
@@ -33,10 +37,14 @@ const ProviderDashboard = () => {
   const [selectedCarId, setSelectedCarId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchCars();
-  }, []);
+    if (session?.user?.id) {
+      fetchCars();
+    }
+  }, [session]);
 
   const fetchCars = async () => {
+    if (!session?.user?.id) return;
+    
     const { data: cars, error } = await supabase
       .from("cars")
       .select(`
@@ -46,7 +54,8 @@ const ProviderDashboard = () => {
           end_date,
           is_available
         )
-      `);
+      `)
+      .eq("provider_id", session.user.id);
 
     if (error) {
       toast({
@@ -60,6 +69,15 @@ const ProviderDashboard = () => {
   };
 
   const handleAddCar = async () => {
+    if (!session?.user?.id) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to add a car",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const { data: carData, error: carError } = await supabase
       .from("cars")
       .insert({
@@ -68,7 +86,8 @@ const ProviderDashboard = () => {
         license_plate: newCar.license_plate,
         seats: parseInt(newCar.seats),
         rate_per_day: parseFloat(newCar.rate_per_day),
-        description: newCar.description
+        description: newCar.description,
+        provider_id: session.user.id // Set the provider_id to the current user's ID
       })
       .select()
       .single();
@@ -97,7 +116,7 @@ const ProviderDashboard = () => {
   };
 
   const handleUpdateCar = async () => {
-    if (!editingCar) return;
+    if (!editingCar || !session?.user?.id) return;
 
     const { error } = await supabase
       .from("cars")
@@ -107,7 +126,8 @@ const ProviderDashboard = () => {
         license_plate: editingCar.license_plate,
         seats: parseInt(editingCar.seats),
         rate_per_day: parseFloat(editingCar.rate_per_day),
-        description: editingCar.description
+        description: editingCar.description,
+        provider_id: session.user.id // Ensure provider_id is set during updates as well
       })
       .eq("id", editingCar.id);
 
@@ -214,6 +234,19 @@ const ProviderDashboard = () => {
       });
     }
   };
+
+  // Check if user is a provider, if not, redirect to home
+  if (loading) {
+    return <div className="container mx-auto py-8 px-4">Loading...</div>;
+  }
+
+  if (!session) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  if (userProfile && userProfile.role !== 'provider') {
+    return <Navigate to="/" replace />;
+  }
 
   return (
     <div className="container mx-auto py-8 px-4">

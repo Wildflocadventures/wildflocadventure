@@ -7,25 +7,33 @@ import { useNavigate } from "react-router-dom";
 export const useAuthProfile = () => {
   const [session, setSession] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const navigate = useNavigate();
 
   useEffect(() => {
+    console.info("useAuth: Initializing");
+    
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.info("useAuth: Got session", session);
       setSession(session);
       if (session?.user?.id) {
         fetchUserProfile(session.user.id);
+      } else {
+        setLoading(false);
       }
     });
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.info("useAuth: Auth state changed", session);
       setSession(session);
       if (session?.user?.id) {
         fetchUserProfile(session.user.id);
       } else {
         setUserProfile(null);
+        setLoading(false);
       }
     });
 
@@ -34,6 +42,7 @@ export const useAuthProfile = () => {
 
   const fetchUserProfile = async (userId) => {
     try {
+      setLoading(true);
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
@@ -42,6 +51,7 @@ export const useAuthProfile = () => {
 
       if (error) {
         console.error("Error fetching user profile:", error);
+        setLoading(false);
         return;
       }
 
@@ -49,8 +59,10 @@ export const useAuthProfile = () => {
         console.log("User profile:", data);
         setUserProfile(data);
       }
+      setLoading(false);
     } catch (error) {
       console.error("Error in fetchUserProfile:", error);
+      setLoading(false);
     }
   };
 
@@ -83,5 +95,5 @@ export const useAuthProfile = () => {
     }
   };
 
-  return { session, userProfile, handleLogout };
+  return { session, userProfile, loading, handleLogout };
 };
