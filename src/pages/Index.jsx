@@ -1,14 +1,13 @@
 
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { AuthButtons } from "@/components/car-listing/AuthButtons";
-import { HeroSection } from "@/components/car-listing/HeroSection";
-import { CarListings } from "@/components/car-listing/CarListings";
 import { useAuthProfile } from "@/hooks/useAuthProfile";
+import { Navbar } from "@/components/layout/Navbar";
+import { HeroSection } from "@/components/car-listing/HeroSection";
+import { ServiceSection } from "@/components/travel-services/ServiceSection";
 
 const Index = () => {
-  const { session, userProfile, handleLogout } = useAuthProfile();
+  // Explicitly set redirectIfNotAuthenticated to false for the home page
+  const { session, userProfile } = useAuthProfile({ redirectIfNotAuthenticated: false });
   const [selectedDates, setSelectedDates] = useState(() => {
     const savedDates = localStorage.getItem('selectedDates');
     if (savedDates) {
@@ -51,38 +50,9 @@ const Index = () => {
     }
   }, [session]);
 
-  const { data: cars, isLoading: carsLoading } = useQuery({
-    queryKey: ["cars", selectedDates],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("cars")
-        .select(`
-          *,
-          profiles (
-            full_name
-          ),
-          car_availability (
-            start_date,
-            end_date,
-            is_available
-          ),
-          bookings (
-            id
-          )
-        `);
-
-      if (error) throw error;
-      return data;
-    },
-  });
-
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white relative">
-      <AuthButtons 
-        session={session} 
-        userProfile={userProfile} 
-        onLogout={handleLogout}
-      />
+    <div className="min-h-screen bg-black">
+      <Navbar session={session} userProfile={userProfile} />
       
       <HeroSection
         location={location}
@@ -91,11 +61,7 @@ const Index = () => {
         setSelectedDates={setSelectedDates}
       />
 
-      <CarListings
-        cars={cars}
-        carsLoading={carsLoading}
-        selectedDates={selectedDates}
-      />
+      <ServiceSection />
     </div>
   );
 };

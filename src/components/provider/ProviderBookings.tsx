@@ -2,73 +2,157 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CalendarDays, Car } from "lucide-react";
+import { CalendarDays, Car, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 
 export const ProviderBookings = () => {
   const [bookings, setBookings] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    const fetchBookings = async () => {
-      try {
-        // Get current user's cars
-        const { data: cars, error: carsError } = await supabase
-          .from("cars")
-          .select("id, model")
-          .eq("provider_id", (await supabase.auth.getUser()).data.user?.id);
-
-        if (carsError) throw carsError;
-        if (!cars || cars.length === 0) {
-          setIsLoading(false);
-          return;
-        }
-
-        const carIds = cars.map(car => car.id);
-        const carIdToModel = cars.reduce((acc, car) => {
-          acc[car.id] = car.model;
-          return acc;
-        }, {} as Record<string, string>);
-
-        // Get bookings for these cars
-        const { data: bookingsData, error: bookingsError } = await supabase
-          .from("bookings")
-          .select(`
-            id,
-            car_id,
-            start_date,
-            end_date,
-            status
-          `)
-          .in("car_id", carIds)
-          .order("start_date", { ascending: true });
-
-        if (bookingsError) throw bookingsError;
-
-        // Annotate bookings with car model
-        const bookingsWithCarModel = bookingsData.map(booking => ({
-          ...booking,
-          car_model: carIdToModel[booking.car_id]
-        }));
-
-        setBookings(bookingsWithCarModel);
-      } catch (error: any) {
-        console.error("Error fetching provider bookings:", error);
-        toast({
-          title: "Error",
-          description: "Could not load bookings",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchBookings();
-  }, [toast]);
+    
+    // Set up an interval to refresh bookings every minute
+    const refreshInterval = setInterval(() => {
+      fetchBookings(false); // Silent refresh
+    }, 60000);
+    
+    return () => clearInterval(refreshInterval);
+  }, []);
+
+  const fetchBookings = async (showLoadingState = true) => {
+    try {
+      if (showLoadingState) {
+        setIsLoading(true);
+      } else {
+        setIsRefreshing(true);
+      }
+      console.log("ProviderBookings: Fetching bookings");
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.log("ProviderBookings: No authenticated user found");
+        setIsLoading(false);
+        setIsRefreshing(false);
+        return;
+      }
+      
+      console.log("ProviderBookings: User ID:", user.id);
+
+      // First fetch the provider profile to ensure we get the correct role
+      const { data: providerProfile, error: profileError } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+
+      if (profileError) {
+        console.error("ProviderBookings: Error fetching provider profile:", profileError);
+        throw profileError;
+      }
+
+      if (providerProfile?.role !== "provider") {
+        console.log("ProviderBookings: User is not a provider", providerProfile);
+        setIsLoading(false);
+        setIsRefreshing(false);
+        return;
+      }
+      
+      console.log("ProviderBookings: Confirmed provider role");
+
+      // Get the cars belonging to the provider with more detailed logging
+      const { data: cars, error: carsError } = await supabase
+        .from("cars")
+        .select("id, model, provider_id")
+        .eq("provider_id", user.id);
+
+      if (carsError) {
+        console.error("ProviderBookings: Error fetching cars:", carsError);
+        throw carsError;
+      }
+
+      console.log("ProviderBookings: Found cars:", cars?.length, cars);
+
+      if (!cars || cars.length === 0) {
+        console.log("ProviderBookings: No cars found for this provider");
+        setIsLoading(false);
+        setIsRefreshing(false);
+        setBookings([]);
+        return;
+      }
+
+      // Create a map of car IDs to their models for easier lookup
+      const carIdToModel = cars.reduce((acc, car) => {
+        acc[car.id] = car.model;
+        return acc;
+      }, {} as Record<string, string>);
+
+      const carIds = cars.map(car => car.id);
+      console.log("ProviderBookings: Car IDs to search for bookings:", carIds);
+
+      // Get bookings for these cars with more detailed query
+      const { data: bookingsData, error: bookingsError } = await supabase
+        .from("bookings")
+        .select(`
+          id,
+          car_id,
+          start_date,
+          end_date,
+          status,
+          total_amount,
+          created_at,
+          customer_id,
+          profiles:customer_id(full_name)
+        `)
+        .in("car_id", carIds)
+        .order('created_at', { ascending: false });
+
+      if (bookingsError) {
+        console.error("ProviderBookings: Error fetching bookings:", bookingsError);
+        throw bookingsError;
+      }
+
+      console.log("ProviderBookings: Raw bookings data:", bookingsData);
+      console.log("ProviderBookings: Total bookings found:", bookingsData?.length || 0);
+      
+      // Log confirmed bookings specifically
+      const confirmedBookings = bookingsData?.filter(booking => booking.status === 'confirmed') || [];
+      console.log("ProviderBookings: Confirmed bookings:", confirmedBookings.length);
+
+      // Add car model information to each booking
+      const bookingsWithCarModel = bookingsData?.map(booking => ({
+        ...booking,
+        car_model: carIdToModel[booking.car_id],
+        customer_name: booking.profiles?.full_name || "Unknown Customer"
+      })) || [];
+
+      console.log("ProviderBookings: Processed bookings with car models:", bookingsWithCarModel);
+      setBookings(bookingsWithCarModel);
+    } catch (error: any) {
+      console.error("Error fetching provider bookings:", error);
+      toast({
+        title: "Error",
+        description: "Could not load bookings. Please try again later.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
+  const handleRefresh = () => {
+    fetchBookings();
+    toast({
+      title: "Refreshing",
+      description: "Fetching latest booking data...",
+    });
+  };
 
   if (isLoading) {
     return (
@@ -83,9 +167,19 @@ export const ProviderBookings = () => {
   if (bookings.length === 0) {
     return (
       <Card>
-        <CardContent className="pt-6 flex flex-col items-center justify-center text-center h-40">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Recent Bookings</CardTitle>
+          <Button size="sm" variant="outline" onClick={handleRefresh}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+        </CardHeader>
+        <CardContent className="pt-1 flex flex-col items-center justify-center text-center h-40">
           <CalendarDays className="h-10 w-10 text-gray-400 mb-4" />
           <p className="text-gray-500">No bookings yet for your cars</p>
+          <p className="text-xs text-gray-400 mt-2">
+            Bookings will appear here once customers book your vehicles
+          </p>
         </CardContent>
       </Card>
     );
@@ -93,7 +187,13 @@ export const ProviderBookings = () => {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-semibold">Recent Bookings</h2>
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-semibold">Recent Bookings</h2>
+        <Button size="sm" variant="outline" onClick={handleRefresh} disabled={isRefreshing}>
+          <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+          {isRefreshing ? 'Refreshing...' : 'Refresh'}
+        </Button>
+      </div>
       {bookings.map((booking) => (
         <Card key={booking.id} className="overflow-hidden">
           <CardContent className="p-0">
@@ -105,6 +205,12 @@ export const ProviderBookings = () => {
                 </div>
                 <div className="mt-1 text-sm text-gray-500">
                   {format(new Date(booking.start_date), "MMM d, yyyy")} - {format(new Date(booking.end_date), "MMM d, yyyy")}
+                </div>
+                <div className="mt-1 text-xs text-gray-500">
+                  Customer: {booking.customer_name}
+                </div>
+                <div className="mt-1 text-xs text-gray-500">
+                  Amount: ${booking.total_amount}
                 </div>
               </div>
               <div className="flex-shrink-0">
